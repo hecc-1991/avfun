@@ -7,6 +7,8 @@ namespace avfun
 {
 	namespace codec {
 
+		class AVVideoFrame;
+
 		class AVVideoReader
 		{
 		public:
@@ -14,7 +16,7 @@ namespace avfun
 			static UP<AVVideoReader> Make(std::string_view filename);
 
 			virtual void SetupDecoder() = 0;
-			virtual void  ReadNextFrame() = 0;
+			virtual SP<AVVideoFrame>  ReadNextFrame() = 0;
 
 		private:
 

@@ -24,6 +24,12 @@ namespace avfun
 
 				void Convert(uint8_t** data, int* linesize, VFrameFmt fmt);
 
+				int GetWidth();
+
+				int GetHeight();
+
+				uint8_t* get();
+
 		private:
 			int width{ 0 };
 			int height{ 0 };

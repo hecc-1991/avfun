@@ -5,16 +5,29 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
+####################### sdl #######################
+set(sdl_DIR ${THIRD_PARTY_DIR}/SDL2-2.0.14)
+set(sdl_INCLUDE ${THIRD_PARTY_DIR}/SDL2-2.0.14/include)
+add_subdirectory(${sdl_DIR} ${sdl_DIR}/build)
 
 ####################### opencv #######################
-#set(opencv_DIR ${THIRD_PARTY_DIR}/opencv)
-#add_subdirectory(${opencv_DIR} ${opencv_DIR}/build EXCLUDE_FROM_ALL)
+set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv/build)
+find_package(OpenCV REQUIRED)
+
+if(OpenCV_FOUND)
+	message(STATUS "------------OpenCV ${OpenCV_VERSION} fonud-----------")	
+	message(STATUS "-- OpenCV_INCLUDE_DIRS = ${OpenCV_INCLUDE_DIRS}")
+	message(STATUS "-- OpenCV_LIBS = ${OpenCV_LIBS}")
+else(OpenCV_FOUND)
+	message(FATAL_ERROR "OpenCV not found")
+endif(OpenCV_FOUND)
+
 
 
 ####################### libyuv #######################
 set(libyuv_DIR ${THIRD_PARTY_DIR}/libyuv)
 set(libyuv_INCLUDE ${THIRD_PARTY_DIR}/libyuv/include)
-add_subdirectory(${libyuv_DIR} ${libyuv_DIR}/build)
+add_subdirectory(${libyuv_DIR} ${libyuv_DIR}/build EXCLUDE_FROM_ALL)
 
 
 ####################### ffmpeg #######################
@@ -76,22 +89,17 @@ source_group_by_files(SOURCE_FILE)
 
 add_library(${PRO_NAME} STATIC ${SOURCE_FILE})
 
-target_link_libraries(${PRO_NAME} PUBLIC ${ffmpeg} yuv)
-target_include_directories(${PRO_NAME} PUBLIC ${CODEC_DIR} ${ffmpeg_INCLUDE} ${libyuv_INCLUDE})
+target_link_libraries(${PRO_NAME} PUBLIC ${ffmpeg} yuv ${OpenCV_LIBS} SDL2)
+target_include_directories(${PRO_NAME} PUBLIC 
+${CODEC_DIR} ${ffmpeg_INCLUDE} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS})
 
 ####################### example #######################
 add_executable(${PRO_NAME}-example01 ${CODEC_DIR}/example/example01.cpp)
 target_link_libraries(${PRO_NAME}-example01 PRIVATE ${PRO_NAME})
 
-#add_custom_target(copy_dll
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/avcodec-58.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/avdevice-58.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/avfilter-7.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/avformat-58.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/avutil-56.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/postproc-55.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/swresample-3.dll ${CMAKE_CURRENT_BINARY_DIR}
-#	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ffmpeg_DIR}/bin/swscale-5.dll ${CMAKE_CURRENT_BINARY_DIR}
-#)
+add_executable(${PRO_NAME}-example02 ${CODEC_DIR}/example/example02.cpp)
+target_link_libraries(${PRO_NAME}-example02 PRIVATE ${PRO_NAME})
 
-#add_dependencies(${PRO_NAME}-example01 copy_dll)
+
+#file(COPY ${ffmpeg_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+#file(COPY ${OpenCV_DIR}/x64/vc15/bin/opencv_world451d.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

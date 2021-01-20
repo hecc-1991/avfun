@@ -6,13 +6,14 @@ extern "C" {
 #endif // __cplusplus
 
 #include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
+#include <libavutil/avutil.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timestamp.h>
+#include <libavutil/opt.h>
 
 #ifdef __cplusplus
 }

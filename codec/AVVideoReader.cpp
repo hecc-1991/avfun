@@ -26,7 +26,7 @@ namespace avfun
 			~AVVideoReaderInner();
 
 			virtual void SetupDecoder() override;
-			virtual void ReadNextFrame() override;
+			virtual SP<AVVideoFrame> ReadNextFrame() override;
 
 		private:
 			void open(std::string_view filename);
@@ -48,6 +48,7 @@ namespace avfun
 			AVFrame* frame{ nullptr };
 			AVPacket pkt;
 
+			int video_frame_count{ 0 };
 		};
 
 
@@ -187,6 +188,7 @@ namespace avfun
 					return ReplyFrameStat::ERROR;
 				}
 
+				LOG_INFO("video_frame n:%d coded_n:%d",video_frame_count++, frame->coded_picture_number);
 
 				av_image_copy(video_dst_data, video_dst_linesize,
 					(const uint8_t**)(frame->data), frame->linesize,
@@ -201,7 +203,7 @@ namespace avfun
 			return ReplyFrameStat::ReceiveSucess;
 		}
 
-		void AVVideoReaderInner::ReadNextFrame() {
+		SP<AVVideoFrame> AVVideoReaderInner::ReadNextFrame() {
 			auto ret = ReplyFrameStat::ReceiveSucess;
 			/* read frames from the file */
 			do 
@@ -219,14 +221,13 @@ namespace avfun
 				if (ret == ReplyFrameStat::ReceiveSucess) {
 					auto vframe = make_sp<AVVideoFrame>(width,height);
 					vframe->Convert(video_dst_data, video_dst_linesize, (VFrameFmt)pix_fmt);
-					break;
+					return vframe;
 				}
 
 			} while (ret == ReplyFrameStat::SendAgain);
 
-
+			return nullptr;
 		}
-
 
 
 		AVVideoReaderInner::~AVVideoReaderInner() {

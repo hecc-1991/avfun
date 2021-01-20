@@ -11,6 +11,10 @@ namespace avfun
 #define LOG_WARNING(format,...) fprintf(stdout, "##avfun## %s:%d(%s)>>[warning]::"#format"\n", __FILE__,__LINE__,__func__,##__VA_ARGS__)
 #define LOG_ERROR(format,...) fprintf(stdout, "##avfun## %s:%d(%s)>>[error]::"#format"\n", __FILE__,__LINE__,__func__,##__VA_ARGS__)
 
+#elif __ANDROID__
+
+
+
 #else
 
 #endif // _WIN32

@@ -17,7 +17,7 @@ namespace avfun
 		void AVVideoFrame::Convert(uint8_t** data, int* linesize, VFrameFmt fmt) {
 			if (fmt == VFrameFmt::YUV420P)
 			{
-				libyuv::I420ToBGRA(data[0], linesize[0], data[1], linesize[1], data[2], linesize[2], pData.get(),width,width,height);
+				libyuv::I420ToARGB(data[0], linesize[0], data[1], linesize[1], data[2], linesize[2], pData.get(),width * FRAME_BGRA_CHANNELS,width,height);
 			}
 			else if (fmt == VFrameFmt::NV12)
 			{
@@ -31,6 +31,18 @@ namespace avfun
 			{
 				LOG_ERROR("invalid format for %d", fmt);
 			}
+		}
+
+		int AVVideoFrame::GetWidth() {
+			return width;
+		}
+
+		int AVVideoFrame::GetHeight() {
+			return height;
+		}
+
+		uint8_t* AVVideoFrame::get() {
+			return pData.get();
 		}
 
 
