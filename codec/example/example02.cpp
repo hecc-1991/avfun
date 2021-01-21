@@ -37,7 +37,7 @@ int openAudioDevice() {
 	/* Set the audio format */
 	wanted.freq = 44100;
 	wanted.format = AUDIO_S16;
-	wanted.channels = 2;    /* 1 = mono, 2 = stereo */
+	wanted.channels = 1;    /* 1 = mono, 2 = stereo */
 	wanted.samples = 1024;  /* Good low-latency value for callback */
 	wanted.callback = fill_audio;
 	wanted.userdata = NULL;
@@ -58,7 +58,7 @@ int main(int argc,char* argv[]) {
 
 	/* Load the audio data ... */
 
-	constexpr auto video_filename = "C:/hecc/develop/github/avfun/codec/example/resource/video01.mp4";
+	constexpr auto video_filename = "C:/hecc/develop/github/avfun/codec/example/resource/audio01.mp3";
 
 	auto ar = AVAudioReader::Make(video_filename);
 	ar->SetupDecoder();
@@ -74,12 +74,14 @@ int main(int argc,char* argv[]) {
 		auto aframe = ar->ReadNextFrame();
 		if (aframe == nullptr) break;
 		audio_pos = aframe->get()[0];
-		audio_len = aframe->GetLinesize();
+		audio_len = aframe->GetSize();
+
 		/* Wait for sound to complete */
 		while (audio_len > 0) {
 			SDL_Delay(100);         /* Sleep 1/10 second */
 		}
 	}
+
 
 
 	SDL_CloseAudio();

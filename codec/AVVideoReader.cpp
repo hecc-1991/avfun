@@ -231,7 +231,10 @@ namespace avfun
 
 
 		AVVideoReaderInner::~AVVideoReaderInner() {
-
+			avcodec_free_context(&video_dec_ctx);
+			avformat_close_input(&fmt_ctx);
+			av_frame_free(&frame);
+			av_free(video_dst_data[0]);
 		}
 
 		UP<AVVideoReader> AVVideoReader::Make(std::string_view filename) {

@@ -25,7 +25,8 @@ namespace avfun
 			~AVAudioResample();
 
 			void Setup(SP<AVAudioStruct> audioSt);
-			SP<AVAudioFrame> Resample(SP<AVAudioStruct> frameData);
+			int Resample(SP<AVAudioStruct> audioSt);
+			uint8_t** data();
 
 		private:
 			struct Impl;

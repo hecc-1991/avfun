@@ -1,6 +1,7 @@
 #include "AVAudioReader.h"
 #include "AVAudioFrame.h"
 #include "AVAudioResample.h"
+#include "AVAudioBuffer.h"
 #include "ffmpeg_config.h"
 #include "LogUtil.h"
 
@@ -47,6 +48,9 @@ namespace avfun
 			int audio_frame_count{ 0 };
 
 			UP<AVAudioResample> audioResample;
+
+			UP<AVAudioBuffer> audioBuffer;
+
 		};
 
 		AVAudioReaderInner::AVAudioReaderInner(std::string_view filename) {
@@ -138,6 +142,8 @@ namespace avfun
 			data->sample_fmt = audio_stream->codec->sample_fmt;
 			audioResample->Setup(data);
 
+			audioBuffer = make_up<AVAudioBuffer>();
+
 			frame = av_frame_alloc();
 			if (!frame) {
 				LOG_ERROR("Could not allocate frame");
@@ -212,12 +218,21 @@ namespace avfun
 
 				if (ret == ReplyFrameStat::ReceiveSucess) {
 					auto ast = make_sp<AVAudioStruct>();
-					ast->data = frame->data;
+					ast->data = frame->extended_data;
 					ast->sample_rate = frame->sample_rate;
 					ast->channels = frame->channels;
 					ast->sample_fmt = frame->format;
 					ast->nb_samples = frame->nb_samples;
-					auto aframe = audioResample->Resample(ast);
+					int frame_size = audioResample->Resample(ast);
+					audioBuffer->AddSamples(audioResample->data(), frame_size);
+
+					if (audioBuffer->GetBufSize() < SUPPORT_AUDIO_SAMPLE_NUM) {
+						ret = ReplyFrameStat::SendAgain;
+						continue;
+					}
+
+					auto aframe = audioBuffer->ReadFrame();
+
 					av_frame_unref(frame);
 					return aframe;
 				}
@@ -230,6 +245,10 @@ namespace avfun
 
 
 		AVAudioReaderInner::~AVAudioReaderInner() {
+
+			avcodec_free_context(&audio_dec_ctx);
+			avformat_close_input(&fmt_ctx);
+			av_frame_free(&frame);
 
 		}
 

@@ -10,19 +10,16 @@ namespace avfun
 		class AVAudioFrame
 		{
 		public:
-			AVAudioFrame();
+			AVAudioFrame(int frame_size);
 			~AVAudioFrame();
 
-
-			uint8_t*** getAddr();
 			uint8_t** get();
 
-			void SetLinesize(int size);
-			int GetLinesize();
+			int GetSize();
 
 		private:
-			uint8_t** data{ NULL };
-			int linesize{ 0 };
+			struct Impl;
+			UP<Impl> _impl;
 		};
 	}
 }
