@@ -59,7 +59,7 @@ namespace avfun
 		}
 
 		int AVAudioFrame::GetSize() {
-			return _impl->frame->nb_samples * SUPPORT_AUDIO_CHANNELS * SUPPORT_AUDIO_SAMPLE_FMT_UNIT;
+			return _impl->frame->linesize[0];
 		}
 
 	}

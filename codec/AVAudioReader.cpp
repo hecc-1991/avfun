@@ -33,6 +33,7 @@ namespace avfun
 			void open(std::string_view filename);
 			int open_codec_context(int* stream_idx, AVCodecContext** dec_ctx, AVFormatContext* fmt_ctx, enum AVMediaType type);
 			ReplyFrameStat decode_packet(AVCodecContext* dec, const AVPacket* pkt);
+			ReplyFrameStat decode_remain_packet(AVCodecContext* dec);
 		private:
 			AVFormatContext* fmt_ctx{ nullptr };
 			AVCodecContext* audio_dec_ctx{ nullptr };
@@ -46,6 +47,9 @@ namespace avfun
 			AVPacket pkt;
 
 			int audio_frame_count{ 0 };
+
+			bool eofPacket{false};
+			bool eofFrame{false};
 
 			UP<AVAudioResample> audioResample;
 
@@ -200,50 +204,94 @@ namespace avfun
 			return ReplyFrameStat::ReceiveSucess;
 		}
 
+		ReplyFrameStat AVAudioReaderInner::decode_remain_packet(AVCodecContext* dec) {
+			
+			int ret = avcodec_receive_frame(dec, frame);
+
+			if (ret < 0) {
+				return ReplyFrameStat::FrameEOF;
+			}
+
+			size_t unpadded_linesize = frame->nb_samples * av_get_bytes_per_sample((AVSampleFormat)frame->format);
+
+			LOG_INFO("audio_frame n:%d nb_samples:%d pts:%lld",
+				audio_frame_count++, frame->nb_samples, frame->pts);
+
+			//av_frame_unref(frame);
+
+			return ReplyFrameStat::ReceiveSucess;
+		}
+
 		SP<AVAudioFrame> AVAudioReaderInner::ReadNextFrame() {
-			auto ret = ReplyFrameStat::SendAgain;
 			/* read frames from the file */
-			do
-			{
-				auto res = av_read_frame(fmt_ctx, &pkt);
 
-				if (res < 0)
-				{
-					LOG_INFO("end of file");
-					break;
-				}
+			do {
 
-				if (pkt.stream_index == audio_stream_idx)
-					ret = decode_packet(audio_dec_ctx, &pkt);
 
-				if (ret == ReplyFrameStat::ERROR)
-					break;
 
-				if (ret == ReplyFrameStat::FrameEOF)
-					break;
-
-				if (ret == ReplyFrameStat::ReceiveSucess) {
-					auto ast = make_sp<AVAudioStruct>();
-					ast->data = frame->extended_data;
-					ast->sample_rate = frame->sample_rate;
-					ast->channels = frame->channels;
-					ast->sample_fmt = frame->format;
-					ast->nb_samples = frame->nb_samples;
-					int frame_size = audioResample->Resample(ast);
-					audioBuffer->AddSamples(audioResample->data(), frame_size);
-
-					if (audioBuffer->GetBufSize() < SUPPORT_AUDIO_SAMPLE_NUM) {
-						ret = ReplyFrameStat::SendAgain;
-						continue;
-					}
-
+				if (audioBuffer->GetBufSize() >= SUPPORT_AUDIO_SAMPLE_NUM ||
+					(audioBuffer->GetBufSize() > 0 && eofFrame)) {
 					auto aframe = audioBuffer->ReadFrame();
-
-					av_frame_unref(frame);
 					return aframe;
 				}
 
-			} while (ret == ReplyFrameStat::SendAgain);
+				if (eofFrame)
+					break;
+
+				auto ret = ReplyFrameStat::SendAgain;
+
+				do
+				{
+
+					if (!eofPacket)
+					{
+						auto res = av_read_frame(fmt_ctx, &pkt);
+						if (res < 0)
+						{
+							eofPacket = true;
+							LOG_INFO("end of send packet");
+						}
+					}
+
+					if (pkt.stream_index == audio_stream_idx && !eofPacket)
+						ret = decode_packet(audio_dec_ctx, &pkt);
+
+					if (eofPacket)
+					{
+						auto sss = audioBuffer->GetBufSize();
+						ret = decode_remain_packet(audio_dec_ctx);
+					}
+
+					if (ret == ReplyFrameStat::ERROR) {
+						av_packet_unref(&pkt);
+						return nullptr;
+					}
+
+					if (ret == ReplyFrameStat::FrameEOF) {
+						eofFrame = true;
+						LOG_INFO("end of receive frame");
+						break;
+					}
+
+					if (ret == ReplyFrameStat::ReceiveSucess) {
+						auto ast = make_sp<AVAudioStruct>();
+						ast->data = frame->extended_data;
+						ast->sample_rate = frame->sample_rate;
+						ast->channels = frame->channels;
+						ast->sample_fmt = frame->format;
+						ast->nb_samples = frame->nb_samples;
+						int frame_size = audioResample->Resample(ast);
+						audioBuffer->AddSamples(audioResample->data(), frame_size);
+						av_frame_unref(frame);
+						break;
+					}
+
+				} while (ret == ReplyFrameStat::SendAgain);
+
+				if (!eofPacket)
+					av_packet_unref(&pkt);
+
+			} while (true);
 
 			return nullptr;
 		}
