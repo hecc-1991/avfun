@@ -207,6 +207,12 @@ namespace avfun
 			{
 				auto res = av_read_frame(fmt_ctx, &pkt);
 
+				if (res < 0)
+				{
+					LOG_INFO("end of file");
+					break;
+				}
+
 				if (pkt.stream_index == audio_stream_idx)
 					ret = decode_packet(audio_dec_ctx, &pkt);
 

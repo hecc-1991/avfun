@@ -10,7 +10,6 @@ extern "C" {
 
 using namespace avfun::codec;
 
-static Uint8* audio_chunk;
 static Uint32 audio_len;
 static Uint8* audio_pos;
 
@@ -21,6 +20,7 @@ static Uint8* audio_pos;
 void fill_audio(void* udata, Uint8* stream, int len)
 {
 	/* Only play if we have data left */
+	SDL_memset(stream, 0, len);
 	if (audio_len == 0)
 		return;
 
@@ -78,7 +78,7 @@ int main(int argc,char* argv[]) {
 
 		/* Wait for sound to complete */
 		while (audio_len > 0) {
-			SDL_Delay(100);         /* Sleep 1/10 second */
+			SDL_Delay(1);         /* Sleep 1/10 second */
 		}
 	}
 
