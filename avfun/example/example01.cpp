@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include "codec/AVVideoReader.h"
-#include "codec/AVVideoFrame.h"
+#include <codec/AVVideoReader.h>
+#include <codec/AVVideoFrame.h>
 #include <opencv2/opencv.hpp>
 
 using namespace avfun::codec;

@@ -1,6 +1,8 @@
 #ifndef LogUtil_h__
 #define LogUtil_h__
 
+#include <assert.h>
+
 namespace avfun
 {
 
@@ -19,8 +21,11 @@ namespace avfun
 
 #endif // _WIN32
 
-
-
+#define AV_Assert(expression)                                                              \
+            if(!expression) {                                                               \
+                LOG_ERROR("assert!");                                                       \
+                assert(expression);                                                         \
+            }                                                                               
 }
 
 #endif // LogUtil_h__
