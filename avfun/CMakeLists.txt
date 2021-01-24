@@ -1,4 +1,4 @@
-set(PRO_NAME codec)
+set(PRO_NAME avfun)
 
 ## support c++17
 set(CMAKE_CXX_STANDARD 17)
@@ -81,9 +81,32 @@ set(ffmpeg avcodec avdevice avfilter avformat avutil postproc swresample swscale
 	
 ####################### source #######################
 	
-set(CODEC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(AVFUN_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(CODEC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/codec)
+set(RENDER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/render)
+	
+set(SOURCE_FILE 
+${CMAKE_CURRENT_SOURCE_DIR}/AVCommon.h
+${CMAKE_CURRENT_SOURCE_DIR}/LogUtil.h
+${CMAKE_CURRENT_SOURCE_DIR}/AVStream.h
+${CMAKE_CURRENT_SOURCE_DIR}/AVStream.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/AVVideoStream.h
+${CMAKE_CURRENT_SOURCE_DIR}/AVVideoStream.cpp
 
-list_source_by_dir(${CODEC_DIR} SOURCE_FILE)
+${CODEC_DIR}/ffmpeg_config.h
+${CODEC_DIR}/AVAudioBuffer.h
+${CODEC_DIR}/AVAudioBuffer.cpp
+${CODEC_DIR}/AVAudioFrame.h
+${CODEC_DIR}/AVAudioFrame.cpp
+${CODEC_DIR}/AVAudioReader.h
+${CODEC_DIR}/AVAudioReader.cpp
+${CODEC_DIR}/AVAudioResample.h
+${CODEC_DIR}/AVAudioResample.cpp
+${CODEC_DIR}/AVVideoFrame.h
+${CODEC_DIR}/AVVideoFrame.cpp
+${CODEC_DIR}/AVVideoReader.h
+${CODEC_DIR}/AVVideoReader.cpp
+)
 
 source_group_by_files(SOURCE_FILE)
 
@@ -91,15 +114,16 @@ add_library(${PRO_NAME} STATIC ${SOURCE_FILE})
 
 target_link_libraries(${PRO_NAME} PUBLIC ${ffmpeg} yuv ${OpenCV_LIBS} SDL2)
 target_include_directories(${PRO_NAME} PUBLIC 
-${CODEC_DIR} ${ffmpeg_INCLUDE} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS})
+${AVFUN_DIR} ${ffmpeg_INCLUDE} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS})
 
 ####################### example #######################
-add_executable(${PRO_NAME}-example01 ${CODEC_DIR}/example/example01.cpp)
+add_executable(${PRO_NAME}-example01 ${AVFUN_DIR}/example/example01.cpp)
 target_link_libraries(${PRO_NAME}-example01 PRIVATE ${PRO_NAME})
 
-add_executable(${PRO_NAME}-example02 ${CODEC_DIR}/example/example02.cpp)
+add_executable(${PRO_NAME}-example02 ${AVFUN_DIR}/example/example02.cpp)
 target_link_libraries(${PRO_NAME}-example02 PRIVATE ${PRO_NAME})
 
 
-#file(COPY ${ffmpeg_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-#file(COPY ${OpenCV_DIR}/x64/vc15/bin/opencv_world451d.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${ffmpeg_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${OpenCV_DIR}/x64/vc15/bin/opencv_world451d.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${sdl_DIR}/build/Debug/SDL2d.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

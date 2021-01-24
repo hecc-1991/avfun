@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include "AVVideoReader.h"
-#include "AVVideoFrame.h"
+#include "codec/AVVideoReader.h"
+#include "codec/AVVideoFrame.h"
 #include <opencv2/opencv.hpp>
 
 using namespace avfun::codec;
@@ -8,7 +8,7 @@ using namespace cv;
 
 int main(int argc,char* args[]) {
 
-	constexpr auto video_filename = "C:/hecc/develop/github/avfun/codec/example/resource/video01.mp4";
+	constexpr auto video_filename = "C:/hecc/develop/github/avfun/avfun/example/resource/video01.mp4";
 	auto vr = AVVideoReader::Make(video_filename);
 
 	namedWindow("video");

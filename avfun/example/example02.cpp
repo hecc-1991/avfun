@@ -4,8 +4,8 @@ extern "C" {
 #include <SDL.h>
 }
 
-#include "AVAudioReader.h"
-#include "AVAudioFrame.h"
+#include "codec/AVAudioReader.h"
+#include "codec/AVAudioFrame.h"
 #include "LogUtil.h"
 
 using namespace avfun::codec;
@@ -58,7 +58,7 @@ int main(int argc,char* argv[]) {
 
 	/* Load the audio data ... */
 
-	constexpr auto video_filename = "C:/hecc/develop/github/avfun/codec/example/resource/audio01.mp3";
+	constexpr auto video_filename = "C:/hecc/develop/github/avfun/avfun/example/resource/audio01.mp3";
 
 	auto ar = AVAudioReader::Make(video_filename);
 	ar->SetupDecoder();

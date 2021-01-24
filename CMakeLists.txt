@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(avfun)
+project(avfun-master)
 
 ####################### function #######################
 
@@ -28,5 +28,5 @@ file(GLOB CUR_SOURCE *.cc *.c *.cpp)
 set(SOURCE_FILE ${CUR_HEADER} ${CUR_SOURCE})
 endmacro()
 
-add_subdirectory(codec)
+add_subdirectory(avfun)
 
