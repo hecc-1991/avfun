@@ -30,3 +30,5 @@ endmacro()
 
 add_subdirectory(avfun)
 
+add_subdirectory(win_player)
+
