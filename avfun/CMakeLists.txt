@@ -103,6 +103,8 @@ ${AVFUN_DIR}/AVStream.h
 ${AVFUN_DIR}/AVStream.cpp
 ${AVFUN_DIR}/AVVideoStream.h
 ${AVFUN_DIR}/AVVideoStream.cpp
+${AVFUN_DIR}/AVPlayer.h
+${AVFUN_DIR}/AVPlayer.cpp
 
 ${CODEC_DIR}/ffmpeg_config.h
 ${CODEC_DIR}/AVAudioBuffer.h
@@ -117,6 +119,7 @@ ${CODEC_DIR}/AVVideoFrame.h
 ${CODEC_DIR}/AVVideoFrame.cpp
 ${CODEC_DIR}/AVVideoReader.h
 ${CODEC_DIR}/AVVideoReader.cpp
+
 
 ${RENDER_DIR}/GLProgram.h
 ${RENDER_DIR}/GLProgram.cpp
@@ -144,6 +147,9 @@ target_link_libraries(${PRO_NAME}-example02 PRIVATE ${PRO_NAME})
 
 add_executable(${PRO_NAME}-example03 ${AVFUN_DIR}/example/example03.cpp)
 target_link_libraries(${PRO_NAME}-example03 PRIVATE ${PRO_NAME})
+
+add_executable(${PRO_NAME}-example04 ${AVFUN_DIR}/example/example04.cpp)
+target_link_libraries(${PRO_NAME}-example04 PRIVATE ${PRO_NAME})
 
 #file(COPY ${ffmpeg_DIR}/bin/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 #file(COPY ${OpenCV_DIR}/x64/vc15/bin/opencv_world451d.dll 

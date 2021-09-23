@@ -37,7 +37,12 @@ set(SOURCE_FILE
 ${PLAYER_DIR}/main.cpp
 ${PLAYER_DIR}/App.h
 ${PLAYER_DIR}/App.cpp
-
+${PLAYER_DIR}/MainWindow.h
+${PLAYER_DIR}/MainWindow.cpp
+${PLAYER_DIR}/ControlView.h
+${PLAYER_DIR}/ControlView.cpp
+${PLAYER_DIR}/DisplayView.h
+${PLAYER_DIR}/DisplayView.cpp
 )
 
 list(APPEND SOURCE_FILE ${IMGUI_SOURCE})
