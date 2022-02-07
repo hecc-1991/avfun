@@ -8,7 +8,7 @@ using namespace cv;
 
 int main(int argc,char* args[]) {
 
-	constexpr auto video_filename = "C:/hecc/develop/github/avfun/avfun/example/resource/video01.mp4";
+	constexpr auto video_filename = "Users/hecc/Documents/hecc/dev/avfun/resources/love.MP4";
 	auto vr = AVVideoReader::Make(video_filename);
 
 	namedWindow("video");

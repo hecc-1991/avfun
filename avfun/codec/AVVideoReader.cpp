@@ -27,6 +27,7 @@ namespace avfun
 
 			virtual void SetupDecoder() override;
 			virtual SP<AVVideoFrame> ReadNextFrame() override;
+            virtual AVFSizei GetSize() override;
 
 		private:
 			void open(std::string_view filename);
@@ -78,7 +79,6 @@ namespace avfun
 		{
 			int ret, stream_index;
 			AVStream* st;
-			AVCodec* dec = NULL;
 			AVDictionary* opts = NULL;
 
 			ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
@@ -91,7 +91,7 @@ namespace avfun
 				st = fmt_ctx->streams[stream_index];
 
 				/* find decoder for the stream */
-				dec = avcodec_find_decoder(st->codecpar->codec_id);
+				auto dec = avcodec_find_decoder(st->codecpar->codec_id);
 				if (!dec) {
 					LOG_ERROR("Failed to find %s codec",av_get_media_type_string(type));
 					return AVERROR(EINVAL);
@@ -229,6 +229,12 @@ namespace avfun
 			return nullptr;
 		}
 
+        AVFSizei AVVideoReaderInner::GetSize() {
+            AVFSizei s;
+            s.width = width;
+            s.height = height;
+            return s;
+        }
 
 		AVVideoReaderInner::~AVVideoReaderInner() {
 			avcodec_free_context(&video_dec_ctx);

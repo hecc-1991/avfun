@@ -13,6 +13,7 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/timestamp.h>
+#include <libavutil/time.h>
 #include <libavutil/opt.h>
 #include <libavutil/audio_fifo.h>
 

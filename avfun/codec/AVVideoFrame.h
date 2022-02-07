@@ -7,10 +7,11 @@ namespace avfun
 {
 	namespace codec
 	{
-		// 当前支持的解码帧数据格式
+		// ?????????????????
 		enum class VFrameFmt : int32_t
 		{
-			YUV420P = 0,	// (I420) YYYYYYYY UU VV
+			YUV420P = 0,	// (I420) YYYYYYYY UU VV range:[16-235]
+            YUVJ420P = 12,   //  range: [0-255]
 			NV12	= 23,	// YYYYYYYY UVUV
 			NV21	= 24,	// YYYYYYYY VUVU
 		};
@@ -30,7 +31,9 @@ namespace avfun
 
 				uint8_t* get();
 
-		private:
+                void reset();
+
+        private:
 			int width{ 0 };
 			int height{ 0 };
 			UP<uint8_t[]> pData;

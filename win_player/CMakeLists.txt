@@ -54,6 +54,9 @@ add_executable(${PRO_NAME} ${SOURCE_FILE})
 target_link_libraries(${PRO_NAME} PRIVATE avfun)
 #target_include_directories(${PRO_NAME} PUBLIC )
 
-file(COPY ${sdl_DIR}/build/Debug/SDL2d.dll 
-${sdl_DIR}/build/Release/SDL2.dll 
-DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+if (WIN32)
+    file(COPY ${sdl_DIR}/build/Debug/SDL2d.dll
+            ${sdl_DIR}/build/Release/SDL2.dll
+            DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif ()
+

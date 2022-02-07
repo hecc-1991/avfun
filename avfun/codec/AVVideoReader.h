@@ -18,6 +18,8 @@ namespace avfun
 			virtual void SetupDecoder() = 0;
 			virtual SP<AVVideoFrame>  ReadNextFrame() = 0;
 
+            virtual AVFSizei GetSize() = 0;
+
 		private:
 
 		};

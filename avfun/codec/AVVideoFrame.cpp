@@ -19,6 +19,10 @@ namespace avfun
 			{
 				libyuv::I420ToARGB(data[0], linesize[0], data[1], linesize[1], data[2], linesize[2], pData.get(),width * FRAME_BGRA_CHANNELS,width,height);
 			}
+            else if(fmt == VFrameFmt::YUVJ420P)
+            {
+                libyuv::J420ToARGB(data[0], linesize[0], data[1], linesize[1], data[2], linesize[2], pData.get(),width * FRAME_BGRA_CHANNELS,width,height);
+            }
 			else if (fmt == VFrameFmt::NV12)
 			{
 				// todo
@@ -45,6 +49,9 @@ namespace avfun
 			return pData.get();
 		}
 
+        void AVVideoFrame::reset() {
+            memset(pData.get(),0,width * height * FRAME_BGRA_CHANNELS);
+        }
 
-	}
+    }
 }

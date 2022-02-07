@@ -28,11 +28,14 @@ namespace avfun
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-			float borderColor[] = { 0.0f, 1.0f, 0.0f, 1.0f };
-			glTexParameterfv(GL_TEXTURE_2D, GL_CLAMP_TO_BORDER, borderColor);
-			int internalformat = colorSpace == TextureColorSpace::BGRA ? GL_BGRA : GL_RGBA;
-			glTexImage2D(GL_TEXTURE_2D, 0, internalformat, width, height, 0, internalformat, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            GLint internalformat = GL_RGBA;
+            GLenum format = colorSpace == TextureColorSpace::BGRA ? GL_BGRA : GL_RGBA;
+            glTexImage2D(GL_TEXTURE_2D, 0, internalformat, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
 		}
 
 		void GLTexture::Impl::release() {

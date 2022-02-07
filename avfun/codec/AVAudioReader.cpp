@@ -12,10 +12,10 @@ namespace avfun
 
 		enum class ReplyFrameStat : uint32_t
 		{
-			ReceiveSucess = 0, // ³É¹¦½ÓÊÕÒ»Ö¡Êý¾Ý
-			SendAgain = 1, // ²»×ãÒ»Ö¡£¬ÐèÒª¼ÌÐø·¢°ü
-			FrameEOF = 2, // ½áÊøÖ¡
-			ERROR = 3, // ½âÂëÒì³£
+			ReceiveSucess = 0, // ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ö¡ï¿½ï¿½ï¿½ï¿½
+			SendAgain = 1, // ï¿½ï¿½ï¿½ï¿½Ò»Ö¡ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			FrameEOF = 2, // ï¿½ï¿½ï¿½ï¿½Ö¡
+			ERROR = 3, // ï¿½ï¿½ï¿½ï¿½ï¿½ì³£
 
 		};
 
@@ -54,12 +54,16 @@ namespace avfun
 			UP<AVAudioResample> audioResample;
 
 			UP<AVAudioBuffer> audioBuffer;
+            FILE *ff = NULL;
 
 		};
 
 		AVAudioReaderInner::AVAudioReaderInner(std::string_view filename) {
 			open(filename);
-		}
+            if(!ff)
+                ff = fopen("/Users/hecc/Documents/hecc/dev/avfun/resources/nout.pcm","wb");
+
+        }
 
 		void AVAudioReaderInner::open(std::string_view filename) {
 			/* open input file, and allocate format context */
@@ -83,7 +87,6 @@ namespace avfun
 		{
 			int ret, stream_index;
 			AVStream* st;
-			AVCodec* dec = NULL;
 			AVDictionary* opts = NULL;
 
 			ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
@@ -96,7 +99,7 @@ namespace avfun
 				st = fmt_ctx->streams[stream_index];
 
 				/* find decoder for the stream */
-				dec = avcodec_find_decoder(st->codecpar->codec_id);
+				auto dec = avcodec_find_decoder(st->codecpar->codec_id);
 				if (!dec) {
 					LOG_ERROR("Failed to find %s codec", av_get_media_type_string(type));
 					return AVERROR(EINVAL);
@@ -141,9 +144,9 @@ namespace avfun
 
 			audioResample = make_up<AVAudioResample>();
 			auto data = make_sp<AVAudioStruct>();
-			data->sample_rate = audio_stream->codec->sample_rate;
-			data->channels = audio_stream->codec->channels;
-			data->sample_fmt = audio_stream->codec->sample_fmt;
+			data->sample_rate = audio_stream->codecpar->sample_rate;
+			data->channels = audio_stream->codecpar->channels;
+			data->sample_fmt = audio_stream->codecpar->format;
 			audioResample->Setup(data);
 
 			audioBuffer = make_up<AVAudioBuffer>();
@@ -197,7 +200,10 @@ namespace avfun
 
 				//av_frame_unref(frame);
 
-				if (ret == 0)
+                if (ret == 0)
+                    fwrite(frame->data[0],1,frame->linesize[0],ff);
+
+                if (ret == 0)
 					break;
 			}
 

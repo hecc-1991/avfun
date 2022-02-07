@@ -1,2 +1,6 @@
 third_party/
 build/
+cmake-build*
+resources/
+.DS_Store
+.idea
