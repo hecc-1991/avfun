@@ -2,7 +2,7 @@
 #include "glad/glad.h"
 #include "LogUtil.h"
 
-namespace avfun
+namespace avf
 {
 	namespace render {
 

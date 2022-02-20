@@ -3,11 +3,10 @@
 
 #include "AVCommon.h"
 
-namespace avfun
+namespace avf
 {
 	namespace codec
 	{
-		// ?????????????????
 		enum class VFrameFmt : int32_t
 		{
 			YUV420P = 0,	// (I420) YYYYYYYY UU VV range:[16-235]

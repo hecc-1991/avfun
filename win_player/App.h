@@ -2,7 +2,7 @@
 #define App_h__
 #include <AVCommon.h>
 
-using namespace avfun;
+using namespace avf;
 
 class App
 {

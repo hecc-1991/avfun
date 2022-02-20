@@ -1,6 +1,6 @@
 #include "AVPlayer.h"
 
-using avfun::AVPlayer;
+using avf::AVPlayer;
 
 int main(int argc, char* argv[]) {
 

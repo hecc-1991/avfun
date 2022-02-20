@@ -2,7 +2,7 @@
 #include <libyuv.h>
 #include "LogUtil.h"
 
-namespace avfun
+namespace avf
 {
 	namespace codec
 	{

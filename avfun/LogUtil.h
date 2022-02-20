@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-namespace avfun
+namespace avf
 {
 
 #if defined(_WIN32) || defined(__APPLE__)
@@ -21,7 +21,6 @@ namespace avfun
 
 #define AV_Assert(expression)                                                              \
             if(!expression) {                                                               \
-                LOG_ERROR("assert!");                                                       \
                 assert(expression);                                                         \
             }                                                                               
 }

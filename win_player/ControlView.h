@@ -3,7 +3,7 @@
 
 #include <AVCommon.h>
 
-using namespace avfun;
+using namespace avf;
 
 class ControlView
 {

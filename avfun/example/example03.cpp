@@ -5,13 +5,13 @@
 #include <LogUtil.h>
 #include <render/GLProgram.h>
 #include <render/GLTexture.h>
-#include <codec/AVVideoReader.h>
+#include <codec/AVFVideoReader.h>
 #include <codec/AVVideoFrame.h>
 
 using namespace cv;
-using namespace avfun;
-using namespace avfun::codec;
-using namespace avfun::render;
+using namespace avf;
+using namespace avf::codec;
+using namespace avf::render;
 
 #define WINDOW_WIGTH 1280
 #define WINDOW_HEIGTH 720
@@ -299,7 +299,7 @@ void main()
 
 	constexpr auto video_filename = "/Users/hecc/Documents/hecc/dev/avfun/resources/zhu.MP4";
 
-	auto vr = AVVideoReader::Make(video_filename);
+	auto vr = AVFVideoReader::Make(video_filename);
 
 	vr->SetupDecoder();
 

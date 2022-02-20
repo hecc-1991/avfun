@@ -1,7 +1,7 @@
 #include "GLTexture.h"
 #include "glad/glad.h"
 
-namespace avfun
+namespace avf
 {
 	namespace render {
 

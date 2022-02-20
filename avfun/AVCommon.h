@@ -6,7 +6,7 @@
 #include <map>
 #include <atomic>
 
-namespace avfun {
+namespace avf {
 
     template<typename T>
     using SP = std::shared_ptr<T>;

@@ -3,7 +3,7 @@
 
 #include <AVCommon.h>
 
-namespace avfun
+namespace avf
 {
 	namespace render {
 

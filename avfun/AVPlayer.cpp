@@ -18,7 +18,7 @@
 
 using namespace std::chrono_literals;
 
-namespace avfun {
+namespace avf {
 
     typedef struct AVFClock {
         double pts {0};           /* clock base */
@@ -319,7 +319,6 @@ namespace avfun {
                     }
                 }
             }
-
 
         };
 
@@ -775,7 +774,7 @@ void main()
 
             auto vertices = fitIn(WINDOW_WIGTH, WINDOW_HEIGTH, videoState.width, videoState.height);
 
-            auto program = make_up<avfun::render::GLProgram>(_vertex_shader, _fragment_shader);
+            auto program = make_up<avf::render::GLProgram>(_vertex_shader, _fragment_shader);
 
             int indices[] = {
                     0, 1, 2,
@@ -805,7 +804,7 @@ void main()
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
             glEnableVertexAttribArray(1);
 
-            auto vframe = make_sp<avfun::codec::AVVideoFrame>(videoState.width, videoState.height);
+            auto vframe = make_sp<avf::codec::AVVideoFrame>(videoState.width, videoState.height);
 
             SDL_Event event;
             bool quit = false;
@@ -820,7 +819,7 @@ void main()
                 //auto frame = videoState.video_frame;
                 //av_frame_unref(frame);
 
-                //videoState.queue_frame_video.peek(frame);
+                //videoState.frame_queue.peek(frame);
                 auto f = refresh_video();
                 //LOG_INFO("peek frame:[%dx%d] -- %lf", f->width, f->height, f->pts);
 
@@ -832,9 +831,9 @@ void main()
                 vframe->reset();
 
                 vframe->Convert(videoState.video_dst_data, videoState.video_dst_linesize,
-                                (avfun::codec::VFrameFmt) videoState.pix_fmt);
+                                (avf::codec::VFrameFmt) videoState.pix_fmt);
 
-                auto texture = make_up<avfun::render::GLTexture>(vframe->GetWidth(), vframe->GetHeight(),
+                auto texture = make_up<avf::render::GLTexture>(vframe->GetWidth(), vframe->GetHeight(),
                                                                  vframe->get());
 
                 program->Use();
