@@ -55,6 +55,7 @@ namespace avf
             av_fast_malloc(&out->buf, &out->buf_size, out_size);
             auto len = swr_convert(swr_ctx, &out->buf, out_count, (const uint8_t**)in->data, in->nb_samples);
             AV_Assert(len);
+            out->nb_samples = len;
             out->buf_size = len * SUPPORT_AUDIO_CHANNELS * av_get_bytes_per_sample(SUPPORT_AUDIO_SAMPLE_FMT);
         }
 

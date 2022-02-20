@@ -2,7 +2,6 @@
 
 #include <thread>
 
-#include "AVFBuffer.h"
 #include "AVVideoFrame.h"
 #include "ffmpeg_config.h"
 #include "LogUtil.h"
@@ -24,10 +23,17 @@ namespace avf
 
 			virtual void SetupDecoder() override;
             virtual void ColseDecoder() override;
-            virtual SP<AVVideoFrame> ReadNextFrame() override;
             virtual AVFSizei GetSize() override;
+            virtual VideoParam GetParam() override;
 
-		private:
+            virtual SP<AVVideoFrame> ReadNextFrame() override;
+            virtual int NbRemaining() override;
+            virtual PicFrame* PeekLast() override;
+            virtual PicFrame* PeekCur() override;
+            virtual PicFrame* PeekNext() override;
+            virtual void Next() override;
+
+        private:
 //			void open(std::string_view filename);
             void read_packet();
             void deocde_frame();
@@ -300,9 +306,36 @@ namespace avf
             return s;
         }
 
+        VideoParam VideoReaderInner::GetParam() {
+            VideoParam vp;
+            vp.width = width;
+            vp.height = height;
+            vp.pix_fmt = (int)pix_fmt;
+            return vp;
+        }
 
 
-		UP<VideoReader> VideoReader::Make(std::string_view filename) {
+        int VideoReaderInner::NbRemaining() {
+            return frame_queue.nb_remaining();
+        }
+
+        PicFrame* VideoReaderInner::PeekLast() {
+            return frame_queue.peek_last();
+        }
+
+        PicFrame* VideoReaderInner::PeekCur() {
+            return frame_queue.peek_cur();
+        }
+
+        PicFrame* VideoReaderInner::PeekNext() {
+            return frame_queue.peek_next();
+        }
+
+        void VideoReaderInner::Next() {
+            return frame_queue.next();
+        }
+
+        UP<VideoReader> VideoReader::Make(std::string_view filename) {
 			auto p = make_up<VideoReaderInner>(filename);
 			return p;
 		}

@@ -11,12 +11,16 @@
 #include "glad/glad.h"
 
 #include "codec/ffmpeg_config.h"
+#include "codec/AVFVideoReader.h"
+#include "codec/AVFAudioReader.h"
+
 #include "LogUtil.h"
 #include "render/GLProgram.h"
 #include "render/GLTexture.h"
 #include "codec/AVVideoFrame.h"
 
 using namespace std::chrono_literals;
+using namespace avf::codec;
 
 namespace avf {
 
@@ -28,253 +32,28 @@ namespace avf {
         int paused{0};
     } Clock;
 
-    struct AVFPacketNode {
-        AVPacket *packet;
-        AVFPacketNode *next;
-    };
-
-#define PACKET_QUEUE_SIZE 4 * 1024 * 1024
-
-    struct AVFPacketQueue {
-        AVFPacketNode *first, *last;
-        int nb_packets{0};
-        int size{0};
-
-        std::condition_variable cv_wb;
-        std::mutex mtx;
-
-        std::condition_variable cv_rb;
-
-
-        void push(AVPacket *packet) {
-            std::unique_lock<std::mutex> lock(mtx);
-
-            if (size > PACKET_QUEUE_SIZE) {
-                cv_wb.wait(lock);
-            }
-
-            AVFPacketNode *node = (AVFPacketNode *) malloc(sizeof(AVFPacketNode));
-            node->packet = av_packet_alloc();
-            node->next = nullptr;
-            av_packet_move_ref(node->packet, packet);
-
-            if (!first) {
-                first = node;
-            } else {
-                last->next = node;
-            }
-            last = node;
-
-            nb_packets++;
-
-            size += sizeof(AVFPacketNode) + node->packet->size;
-
-            //LOG_INFO("push pkg: [%d] %d -- %d | %lld", node->packet->stream_index, nb_packets, size,node->packet->pts);
-
-            cv_rb.notify_one();
-
-        }
-
-        void peek(AVPacket *packet) {
-            std::unique_lock<std::mutex> lock(mtx);
-
-            if (nb_packets == 0 || size == 0) {
-                cv_rb.wait(lock);
-            }
-
-            AVFPacketNode *node = first;
-
-            first = node->next;
-            if (!first) {
-                last = nullptr;
-            }
-
-            av_packet_move_ref(packet, node->packet);
-
-            av_packet_free(&node->packet);
-            free(node);
-
-            nb_packets--;
-            size -= sizeof(AVFPacketNode) + packet->size;
-
-            //LOG_INFO("peek pkg: [%d] %d -- %d | %lld", packet->stream_index, nb_packets, size, packet->pts);
-
-            cv_wb.notify_one();
-        }
-    };
-
-
-    struct AVFFrame {
-        AVFrame *frame;
-        double pts;
-        int width;
-        int height;
-        int format;
-    };
-
-    template<size_t _Size>
-    struct AVFFrameQueue {
-
-        AVFFrameQueue() {
-
-            for (int i = 0; i < _Size; ++i) {
-                queue[i].frame = av_frame_alloc();
-            }
-        }
-
-        ~AVFFrameQueue() {
-            for (int i = 0; i < _Size; ++i) {
-                av_frame_free(&queue[i].frame);
-            }
-        }
-
-        AVFFrame queue[_Size];
-        int rindex{0};
-        int rindex_shown{0};
-        int windex{0};
-        int size{0};
-
-        std::condition_variable cv_rb;
-        std::condition_variable cv_wb;
-        std::mutex mtx;
-
-        void push(AVFrame *frame, double pts) {
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-
-                if (size == _Size) {
-                    cv_wb.wait(lock);
-                }
-            }
-
-            auto f = &queue[windex];
-            f->pts = pts;
-            f->width = frame->width;
-            f->height = frame->height;
-            f->format = frame->format;
-
-            av_frame_move_ref(f->frame, frame);
-            //LOG_INFO("push frame:[%dx%d]  %d -- %lf", f->width,f->height, size,f->pts);
-
-            windex++;
-            if (windex == _Size) {
-                windex = 0;
-            }
-
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-                size++;
-            }
-
-            cv_rb.notify_one();
-        }
-
-        void peek(AVFrame *frame) {
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-
-                if (size - rindex_shown == 0) {
-                    cv_rb.wait(lock);
-                }
-            }
-
-            //LOG_INFO("peek frame:[%dx%d] -- %lf", queue[rindex].width, queue[rindex].height, queue[rindex].pts);
-
-            av_frame_move_ref(frame, queue[rindex].frame);
-            av_frame_unref(queue[rindex].frame);
-
-
-            rindex++;
-            if (rindex == _Size) {
-                rindex = 0;
-            }
-
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-                size--;
-            }
-
-            cv_wb.notify_one();
-        }
-
-        AVFFrame* peek_last() {
-            return &queue[rindex];
-        }
-
-        AVFFrame* peek_cur() {
-            return &queue[(rindex + rindex_shown) % _Size];
-        }
-
-        AVFFrame* peek_next() {
-            return &queue[(rindex + rindex_shown + 1) % _Size];
-        }
-
-        int nb_remaining(){
-            return size - rindex_shown;
-        }
-
-        void next(){
-            // 保留一帧
-            if(!rindex_shown){
-                rindex_shown = 1;
-                return;
-            }
-
-            av_frame_unref(queue[rindex].frame);
-
-            rindex++;
-            if (rindex == _Size) {
-                rindex = 0;
-            }
-
-            {
-                std::unique_lock<std::mutex> lock(mtx);
-                size--;
-            }
-
-            cv_wb.notify_one();
-
-        }
-
-    };
 
 
     struct VideoState {
 
-        AVFPacketQueue queue_pkt_video;
-        AVFPacketQueue queue_pkt_audio;
-
-        AVFFrameQueue<3> queue_frame_video;
-        AVFFrameQueue<9> queue_frame_audio;
-
-        int width;
-        int height;
-        AVPixelFormat pix_fmt;
-        AVFrame *video_frame;
-        uint8_t *video_dst_data[4] = {NULL};
-        int video_dst_linesize[4];
-
-        AVFrame *audio_frame;
         uint8_t *audio_buf{NULL};
         int audio_buf_size{0};
-        double audio_pts;
+        int audio_buf_index{0};
+        int nb_samples{0};
+        double audio_pts{0.0};
 
         double frame_timer{0.0};
         AVFClock vidclk;
         AVFClock audclk;
 
+        UP<VideoReader> video_reader;
+        UP<AudioReader> audio_reader;
+
     };
 
     struct AVPlayer::Impl {
-        AVFormatContext *fmt_ctx{nullptr};
-        AVCodecContext *video_dec_ctx{nullptr};
-        AVCodecContext *audio_dec_ctx{nullptr};
-        int video_stream_idx;
-        int audio_stream_idx;
-        AVStream *video_stream{nullptr};
-        AVStream *audio_stream{nullptr};
 
-        VideoState videoState;
+        VideoState* videoState;
 
         std::thread _th_demux;
         std::thread _th_devid;
@@ -282,253 +61,59 @@ namespace avf {
         std::thread _th_play_aud;
 
 
+
+
         //////////////////////////////////////////////////////////////////////////
 
-        int decode_packet(AVCodecContext *dec_ctx, AVFPacketQueue *queue, AVPacket *packet, AVFrame *frame) {
-
-            int ret = 0;
-
-            for (;;) {
-
-                do {
-
-                    ret = avcodec_receive_frame(dec_ctx, frame);
-                    //LOG_INFO("## avcodec_receive_frame: %d",ret);
-                    //LOG_INFO("## avcodec_receive_frame: [%dx%d] -- %lld",frame->width,frame->height,frame->pts);
-
-                    if (ret == 0) {
-                        return 0;
-                    }
-
-                    if (ret == AVERROR_EOF) {
-                        LOG_ERROR("## eof");
-                        return 1;
-                    }
-
-                } while (ret != AVERROR(EAGAIN));
-
-                {
-                    queue->peek(packet);
-                    ret = avcodec_send_packet(dec_ctx, packet);
-
-                    av_packet_unref(packet);
-
-                    if (ret < 0) {
-                        LOG_ERROR("Error submitting a packet for decoding (%d)", ret);
-                        return -1;
-                    }
-                }
-            }
-
-        };
-
-        void deocde_video() {
-            LOG_INFO("## deocde_video");
-
-            AVPacket *packet = av_packet_alloc();
-            AVFrame *frame = av_frame_alloc();
-
-            while (true) {
-
-                auto ret = decode_packet(video_dec_ctx, &videoState.queue_pkt_video, packet, frame);
-                //LOG_INFO("## decode_packet: [%dx%d] -- %lld",frame->width,frame->height,frame->pts);
-
-                if (!ret) {
-                    double pts = frame->pts * av_q2d(video_stream->time_base);
-                    videoState.queue_frame_video.push(frame, pts);
-                    av_frame_unref(frame);
-                }
-            }
-
-            av_packet_free(&packet);
-            av_frame_free(&frame);
-
-        }
-
-        void deocde_audio() {
-            LOG_INFO("deocde_audio");
-
-            AVPacket *packet = av_packet_alloc();
-            AVFrame *frame = av_frame_alloc();
-
-
-            while (true) {
-
-                auto ret = decode_packet(audio_dec_ctx, &videoState.queue_pkt_audio, packet, frame);
-                //LOG_INFO("## decode_packet: [%dx%d] -- %lld",frame->width,frame->height,frame->pts);
-
-                if (!ret) {
-                    double pts = frame->pts * av_q2d(audio_stream->time_base);
-                    videoState.queue_frame_audio.push(frame, pts);
-                    av_frame_unref(frame);
-                }
-            }
-
-            av_packet_free(&packet);
-            av_frame_free(&frame);
-        }
-
-        void read_packet() {
-            LOG_INFO("read_packet");
-
-            while (true) {
-                AVPacket *pkt = av_packet_alloc();
-                auto res = av_read_frame(fmt_ctx, pkt);
-                if (res != 0) {
-                    LOG_ERROR("failed to av_read_frame: %lld", res);
-                    av_packet_free(&pkt);
-                    break;
-                }
-
-                if (pkt->stream_index == video_stream_idx) {
-                    videoState.queue_pkt_video.push(pkt);
-                } else if (pkt->stream_index == audio_stream_idx) {
-                    videoState.queue_pkt_audio.push(pkt);
-                }
-
-                av_packet_free(&pkt);
-            }
-
-        }
-
-        int open_codec_context(int *stream_idx,
-                               AVCodecContext **dec_ctx, AVFormatContext *fmt_ctx, enum AVMediaType type) {
-            int ret, stream_index;
-            AVStream *st;
-            AVDictionary *opts = NULL;
-
-            ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
-            if (ret < 0) {
-                LOG_ERROR("Could not find %s stream", av_get_media_type_string(type));
-                return ret;
-            } else {
-                stream_index = ret;
-                st = fmt_ctx->streams[stream_index];
-
-                /* find decoder for the stream */
-                auto dec = avcodec_find_decoder(st->codecpar->codec_id);
-                if (!dec) {
-                    LOG_ERROR("Failed to find %s codec", av_get_media_type_string(type));
-                    return AVERROR(EINVAL);
-                }
-
-                /* Allocate a codec context for the decoder */
-                *dec_ctx = avcodec_alloc_context3(dec);
-                if (!*dec_ctx) {
-                    LOG_ERROR("Failed to allocate the %s codec context", av_get_media_type_string(type));
-                    return AVERROR(ENOMEM);
-                }
-
-                /* Copy codec parameters from input stream to output codec context */
-                if ((ret = avcodec_parameters_to_context(*dec_ctx, st->codecpar)) < 0) {
-                    LOG_ERROR("Failed to copy %s codec parameters to decoder context", av_get_media_type_string(type));
-                    return ret;
-                }
-
-                /* Init the decoders */
-                if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0) {
-                    LOG_ERROR("Failed to open %s codec", av_get_media_type_string(type));
-                    return ret;
-                }
-                *stream_idx = stream_index;
-            }
-
-            videoState.audio_frame = av_frame_alloc();
-            videoState.video_frame = av_frame_alloc();
-
-            return 0;
-        }
-
         void demux(std::string_view filename) {
-
-            /* open input file, and allocate format context */
-            if (avformat_open_input(&fmt_ctx, filename.data(), NULL, NULL) < 0) {
-                LOG_ERROR("Could not open source file %s", filename.data());
-                exit(1);
-            }
-
-            /* retrieve stream information */
-            if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
-                LOG_ERROR("Could not find stream information");
-                exit(1);
-            }
-
-            /* dump input information to stderr */
-            av_dump_format(fmt_ctx, 0, filename.data(), 0);
-
-
-            if (fmt_ctx == NULL)return;
-
-
-            if (open_codec_context(&video_stream_idx, &video_dec_ctx, fmt_ctx, AVMEDIA_TYPE_VIDEO) >= 0) {
-                video_stream = fmt_ctx->streams[video_stream_idx];
-
-                videoState.width = video_dec_ctx->width;
-                videoState.height = video_dec_ctx->height;
-                videoState.pix_fmt = video_dec_ctx->pix_fmt;
-
-                int ret = av_image_alloc(videoState.video_dst_data, videoState.video_dst_linesize,
-                                         videoState.width, videoState.height, videoState.pix_fmt, 1);
-
-                AV_Assert(ret > 0);
-            }
-
-
-            if (!video_stream) {
-                LOG_ERROR("Could not find video stream in the input, aborting");
-            } else {
-                _th_devid = std::thread(&AVPlayer::Impl::deocde_video, this);
-            }
-
-
-            if (open_codec_context(&audio_stream_idx, &audio_dec_ctx, fmt_ctx, AVMEDIA_TYPE_AUDIO) >= 0) {
-                audio_stream = fmt_ctx->streams[audio_stream_idx];
-            }
-
-
-            if (!audio_stream) {
-                LOG_ERROR("Could not find audio stream in the input, aborting");
-            } else {
-                _th_deaud = std::thread(&AVPlayer::Impl::deocde_audio, this);
-            }
-
-            read_packet();
 
         }
 
         void openVideo(std::string_view filename) {
 
-            //解复用线程
-            std::thread th(&AVPlayer::Impl::demux, this, filename);
+            videoState = new VideoState();
 
-            _th_demux = std::move(th);
+            videoState->video_reader = VideoReader::Make(filename);
+            videoState->video_reader->SetupDecoder();
+
+            videoState->audio_reader = AudioReader::Make(filename);
+            videoState->audio_reader->SetupDecoder();
+
+            //解复用线程
+//            std::thread th(&AVPlayer::Impl::demux, this, filename);
+//            _th_demux = std::move(th);
         }
 
         static void fill_audio(void *udata, Uint8 *stream, int len) {
             VideoState *vs = (VideoState *) udata;
+
 
             double audio_callback_time = av_gettime_relative() / 1000000.0;
 
             memset(stream, 0, len);
 
             while (len > 0) {
-                if (vs->audio_buf_size == 0) {
-                    av_frame_unref(vs->audio_frame);
-                    vs->audio_pts = vs->queue_frame_audio.peek_cur()->pts;
-                    vs->queue_frame_audio.peek(vs->audio_frame);
+                if (vs->audio_buf_index >= vs->audio_buf_size) {
+                    auto af = vs->audio_reader->ReadNextFrame();
 
-                    vs->audio_buf = vs->audio_frame->data[0];
-                    vs->audio_buf_size = vs->audio_frame->linesize[0] / 2;
+                    vs->audio_buf = af->buf;
+                    vs->audio_buf_size = af->buf_size;
+                    vs->nb_samples = af->nb_samples;
+
+                    vs->audio_buf_index = 0;
                 }
 
                 int len1 = len > vs->audio_buf_size ? vs->audio_buf_size : len;
                 memcpy(stream, vs->audio_buf, len1);
 
                 vs->audio_buf += len1;
-                vs->audio_buf_size -= len1;
+                vs->audio_buf_index += len1;
 
                 stream += len1;
                 len -= len1;
+
+                vs->audio_pts += 1.0 * vs->nb_samples / SUPPORT_AUDIO_SAMPLE_RATE * len1 / vs->audio_buf_size;
+
             }
 
             auto set_clock_at = [](AVFClock *c, double pts,double time)
@@ -546,12 +131,12 @@ namespace avf {
             SDL_AudioSpec wanted;
 
             /* Set the audio format */
-            wanted.freq = 44100;
-            wanted.format = AUDIO_F32;
-            wanted.channels = 1;    /* 1 = mono, 2 = stereo */
-            wanted.samples = 1024;  /* Good low-latency value for callback */
+            wanted.freq = SUPPORT_AUDIO_SAMPLE_RATE;
+            wanted.format = AUDIO_S16;
+            wanted.channels = SUPPORT_AUDIO_CHANNELS;    /* 1 = mono, 2 = stereo */
+            wanted.samples = SUPPORT_AUDIO_SAMPLE_NUM;  /* Good low-latency value for callback */
             wanted.callback = AVPlayer::Impl::fill_audio;
-            wanted.userdata = &videoState;
+            wanted.userdata = videoState;
 
             /* Open the audio device, forcing the desired format */
             if (SDL_OpenAudio(&wanted, NULL) < 0) {
@@ -657,7 +242,7 @@ namespace avf {
                 LOG_ERROR("line: %d, err: %d", line, err);
         }
 
-        AVFFrame* refresh_video(){
+        PicFrame* refresh_video(){
 
             auto get_clock = [](AVFClock *c)->double{
                 if (c->paused) {
@@ -698,50 +283,50 @@ namespace avf {
                 return delay;
             };
 
-            if (videoState.queue_frame_video.nb_remaining() > 0){
+            if (videoState->video_reader->NbRemaining() > 0){
                 retry:
-                auto lastvp = videoState.queue_frame_video.peek_last();
-                auto vp = videoState.queue_frame_video.peek_cur();
+                auto lastvp = videoState->video_reader->PeekLast();
+                auto vp = videoState->video_reader->PeekCur();
 
                 // 第一帧时刻
                 //if(lastvp->pts == vp->pts)
                 //    videoState.frame_timer = av_gettime_relative() / 1000000.0;
 
                 auto last_duration = vp->pts - lastvp->pts;
-                auto delay = compute_target_delay(last_duration,&videoState.vidclk,&videoState.audclk);
+                auto delay = compute_target_delay(last_duration,&videoState->vidclk,&videoState->audclk);
 
 
                 auto time= av_gettime_relative()/1000000.0;
                 // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
-                if(time < videoState.frame_timer + delay){
+                if(time < videoState->frame_timer + delay){
                     goto display;
                 }
 
-                videoState.frame_timer += delay;
+                videoState->frame_timer += delay;
                 // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
-                if (delay > 0 && time - videoState.frame_timer > AV_SYNC_THRESHOLD_MAX)
-                    videoState.frame_timer = time;
+                if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX)
+                    videoState->frame_timer = time;
 
                 // 更新视频时钟：时间戳、时钟时间
-                set_clock(&videoState.vidclk, vp->pts);
+                set_clock(&videoState->vidclk, vp->pts);
 
                 // 是否要丢弃未能及时播放的视频帧
-                if (videoState.queue_frame_video.nb_remaining() > 1) {
-                    auto nextvp = videoState.queue_frame_video.peek_next();
+                if (videoState->video_reader->NbRemaining() > 1) {
+                    auto nextvp = videoState->video_reader->PeekNext();
                     auto duration = nextvp->pts - vp->pts;
 
-                    if(time > videoState.frame_timer + duration){
-                        videoState.queue_frame_video.next();
+                    if(time > videoState->frame_timer + duration){
+                        videoState->video_reader->Next();
                         goto retry;
                     }
                 }
 
-                videoState.queue_frame_video.next();
+                videoState->video_reader->Next();
 
             }
 
             display:
-             return videoState.queue_frame_video.peek_last();
+             return videoState->video_reader->PeekLast();
         }
 
         void render_video(SDL_Window *mainwindow) {
@@ -771,8 +356,10 @@ void main()
 }
 )";
 
+            auto size = videoState->video_reader->GetSize();
+            auto vparam = videoState->video_reader->GetParam();
 
-            auto vertices = fitIn(WINDOW_WIGTH, WINDOW_HEIGTH, videoState.width, videoState.height);
+            auto vertices = fitIn(WINDOW_WIGTH, WINDOW_HEIGTH, size.width, size.height);
 
             auto program = make_up<avf::render::GLProgram>(_vertex_shader, _fragment_shader);
 
@@ -804,7 +391,7 @@ void main()
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
             glEnableVertexAttribArray(1);
 
-            auto vframe = make_sp<avf::codec::AVVideoFrame>(videoState.width, videoState.height);
+            auto vframe = make_sp<avf::codec::AVVideoFrame>(size.width, size.height);
 
             SDL_Event event;
             bool quit = false;
@@ -815,23 +402,14 @@ void main()
                 glClearColor(0.2f, 0.3f, 0.3f, 1.0);
                 glClear(GL_COLOR_BUFFER_BIT);
 
-
-                //auto frame = videoState.video_frame;
-                //av_frame_unref(frame);
-
-                //videoState.frame_queue.peek(frame);
                 auto f = refresh_video();
                 //LOG_INFO("peek frame:[%dx%d] -- %lf", f->width, f->height, f->pts);
 
 
-                av_image_copy(videoState.video_dst_data, videoState.video_dst_linesize,
-                              (const uint8_t **) (f->frame->data), f->frame->linesize,
-                              videoState.pix_fmt, videoState.width, videoState.height);
-
                 vframe->reset();
 
-                vframe->Convert(videoState.video_dst_data, videoState.video_dst_linesize,
-                                (avf::codec::VFrameFmt) videoState.pix_fmt);
+                vframe->Convert(f->frame->data, f->frame->linesize,
+                                (avf::codec::VFrameFmt) vparam.pix_fmt);
 
                 auto texture = make_up<avf::render::GLTexture>(vframe->GetWidth(), vframe->GetHeight(),
                                                                  vframe->get());
@@ -857,8 +435,8 @@ void main()
 
         }
 
-
         void playVideo() {
+
             SDL_Window *mainwindow = nullptr;
             SDL_GLContext maincontext;
 

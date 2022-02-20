@@ -8,8 +8,6 @@ namespace avf
 {
 	namespace codec
 	{
-		class AVAudioFrame;
-
         struct AudioParam {
             int sample_rate;
             int channels;

@@ -224,7 +224,6 @@ namespace avf
             info.nb_samples = audio_stream->codecpar->frame_size;
 
             return info;
-
         }
 
 

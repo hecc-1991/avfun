@@ -52,7 +52,7 @@ namespace avf {
 
             size += sizeof(PacketNode) + node->packet->size;
 
-            LOG_INFO("push pkg: [%d] %d -- %d | %lld", node->packet->stream_index, nb_packets, size, node->packet->pts);
+            //LOG_INFO("push pkg: [%d] %d -- %d | %lld", node->packet->stream_index, nb_packets, size, node->packet->pts);
 
             cv_rb.notify_one();
 
@@ -80,7 +80,7 @@ namespace avf {
             nb_packets--;
             size -= sizeof(PacketNode) + packet->size;
 
-            LOG_INFO("peek pkg: [%d] %d -- %d | %lld", packet->stream_index, nb_packets, size, packet->pts);
+            //LOG_INFO("peek pkg: [%d] %d -- %d | %lld", packet->stream_index, nb_packets, size, packet->pts);
 
             cv_wb.notify_one();
         }
