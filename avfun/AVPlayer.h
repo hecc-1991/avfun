@@ -13,6 +13,7 @@ namespace avf
 		~AVPlayer();
 	public:
 		void OpenVideo(std::string_view filename);
+		void CloseVideo();
 
 		void Start();
 

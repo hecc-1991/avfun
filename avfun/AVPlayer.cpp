@@ -24,7 +24,7 @@ using namespace avf::codec;
 
 namespace avf {
 
-    typedef struct AVFClock {
+    typedef struct Clock {
         double pts {0};           /* clock base */
         double pts_drift{0};     /* clock base minus time at which we updated the clock */
         double last_updated{0};
@@ -43,8 +43,8 @@ namespace avf {
         double audio_pts{0.0};
 
         double frame_timer{0.0};
-        AVFClock vidclk;
-        AVFClock audclk;
+        Clock vidclk;
+        Clock audclk;
 
         UP<VideoReader> video_reader;
         UP<AudioReader> audio_reader;
@@ -65,13 +65,21 @@ namespace avf {
 
         //////////////////////////////////////////////////////////////////////////
 
-        void demux(std::string_view filename) {
-
+        void init_clock(Clock *c)
+        {
+            double time = av_gettime_relative() / 1000000.0;
+            c->pts = 0;
+            c->last_updated = time;
+            c->pts_drift = c->pts - time;
+            c->serial = -1;
         }
 
-        void openVideo(std::string_view filename) {
+        void open_video(std::string_view filename) {
 
             videoState = new VideoState();
+
+            init_clock(&videoState->audclk);
+            init_clock(&videoState->vidclk);
 
             videoState->video_reader = VideoReader::Make(filename);
             videoState->video_reader->SetupDecoder();
@@ -82,6 +90,11 @@ namespace avf {
             //解复用线程
 //            std::thread th(&AVPlayer::Impl::demux, this, filename);
 //            _th_demux = std::move(th);
+        }
+
+        void close_video(){
+            videoState = new VideoState();
+
         }
 
         static void fill_audio(void *udata, Uint8 *stream, int len) {
@@ -116,7 +129,7 @@ namespace avf {
 
             }
 
-            auto set_clock_at = [](AVFClock *c, double pts,double time)
+            auto set_clock_at = [](Clock *c, double pts, double time)
             {
                 c->pts = pts;
                 c->last_updated = time;
@@ -244,7 +257,7 @@ namespace avf {
 
         PicFrame* refresh_video(){
 
-            auto get_clock = [](AVFClock *c)->double{
+            auto get_clock = [](Clock *c)->double{
                 if (c->paused) {
                     return c->pts;
                 } else {
@@ -253,7 +266,7 @@ namespace avf {
                 }
             };
 
-            auto set_clock = [](AVFClock *c, double pts)
+            auto set_clock = [](Clock *c, double pts)
             {
                 double time = av_gettime_relative() / 1000000.0;
 
@@ -262,7 +275,9 @@ namespace avf {
                 c->pts_drift = c->pts - time;
             };
 
-            auto compute_target_delay = [&](double delay,AVFClock *vidclk,AVFClock *audclk)->double{
+            auto compute_target_delay = [&](double delay, Clock *vidclk, Clock *audclk)->double{
+                //LOG_INFO("video: V - A = %f - %f\n", get_clock(vidclk), get_clock(audclk));
+
                 auto diff = get_clock(vidclk) - get_clock(audclk);
 
 #define AV_SYNC_THRESHOLD_MIN 0.04
@@ -299,13 +314,17 @@ namespace avf {
                 auto time= av_gettime_relative()/1000000.0;
                 // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
                 if(time < videoState->frame_timer + delay){
+                    LOG_WARNING("hecc-- 1");
                     goto display;
                 }
 
                 videoState->frame_timer += delay;
                 // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
-                if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX)
+                if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX){
+                    LOG_WARNING("hecc-- 2");
+
                     videoState->frame_timer = time;
+                }
 
                 // 更新视频时钟：时间戳、时钟时间
                 set_clock(&videoState->vidclk, vp->pts);
@@ -316,6 +335,8 @@ namespace avf {
                     auto duration = nextvp->pts - vp->pts;
 
                     if(time > videoState->frame_timer + duration){
+                        LOG_WARNING("hecc-- 3");
+
                         videoState->video_reader->Next();
                         goto retry;
                     }
@@ -324,6 +345,7 @@ namespace avf {
                 videoState->video_reader->Next();
 
             }
+            LOG_WARNING("hecc-- 4");
 
             display:
              return videoState->video_reader->PeekLast();
@@ -461,7 +483,11 @@ void main()
     AVPlayer::~AVPlayer() {}
 
     void AVPlayer::OpenVideo(std::string_view filename) {
-        _impl->openVideo(filename);
+        _impl->open_video(filename);
+    }
+
+    void AVPlayer::CloseVideo() {
+        _impl->close_video();
     }
 
     void AVPlayer::Start() {
