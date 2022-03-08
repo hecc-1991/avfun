@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18.2)
+cmake_minimum_required(VERSION 3.17.5)
 
 set(PRO_NAME avfun)
 
@@ -63,9 +63,9 @@ source_group_by_files(SOURCE_FILE)
 
 add_library(${PRO_NAME} STATIC ${SOURCE_FILE})
 
-target_link_libraries(${PRO_NAME} PUBLIC ${FFMPEG_LIBS} yuv ${OpenCV_LIBS} SDL2)
+target_link_libraries(${PRO_NAME} PUBLIC ${FFMPEG_LIBS} yuv ${OpenCV_LIBS} ${SDL2_LIBRARIES})
 target_include_directories(${PRO_NAME} PUBLIC
-        ${AVFUN_DIR} ${GLAD_DIR} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS})
+        ${AVFUN_DIR} ${GLAD_DIR} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS})
 
 ####################### example #######################
 add_executable(${PRO_NAME}-example01 ${AVFUN_DIR}/example/example01.cpp)

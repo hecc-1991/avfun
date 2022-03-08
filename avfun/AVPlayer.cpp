@@ -298,30 +298,35 @@ namespace avf {
                 return delay;
             };
 
+
+            auto vp_duration = [&](PicFrame* vp,PicFrame* nextvp)->double{
+                auto duration = nextvp->pts - vp->pts;
+                if(duration <= 0)
+                    return vp->duration;
+                return duration;
+            };
+
             if (videoState->video_reader->NbRemaining() > 0){
                 retry:
                 auto lastvp = videoState->video_reader->PeekLast();
                 auto vp = videoState->video_reader->PeekCur();
 
-                // 第一帧时刻
-                //if(lastvp->pts == vp->pts)
-                //    videoState.frame_timer = av_gettime_relative() / 1000000.0;
 
-                auto last_duration = vp->pts - lastvp->pts;
+                auto last_duration = vp_duration(lastvp,vp);
                 auto delay = compute_target_delay(last_duration,&videoState->vidclk,&videoState->audclk);
 
 
                 auto time= av_gettime_relative()/1000000.0;
                 // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
                 if(time < videoState->frame_timer + delay){
-                    LOG_WARNING("hecc-- 1");
+                    //LOG_WARNING("hecc-- 1");
                     goto display;
                 }
 
                 videoState->frame_timer += delay;
                 // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
                 if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX){
-                    LOG_WARNING("hecc-- 2");
+                    //LOG_WARNING("hecc-- 2");
 
                     videoState->frame_timer = time;
                 }
@@ -332,10 +337,10 @@ namespace avf {
                 // 是否要丢弃未能及时播放的视频帧
                 if (videoState->video_reader->NbRemaining() > 1) {
                     auto nextvp = videoState->video_reader->PeekNext();
-                    auto duration = nextvp->pts - vp->pts;
+                    auto duration = vp_duration(vp,nextvp);
 
                     if(time > videoState->frame_timer + duration){
-                        LOG_WARNING("hecc-- 3");
+                        //LOG_WARNING("hecc-- 3: %f",duration);
 
                         videoState->video_reader->Next();
                         goto retry;
@@ -345,7 +350,7 @@ namespace avf {
                 videoState->video_reader->Next();
 
             }
-            LOG_WARNING("hecc-- 4");
+            //LOG_WARNING("hecc-- 4");
 
             display:
              return videoState->video_reader->PeekLast();

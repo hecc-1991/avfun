@@ -48,6 +48,7 @@ namespace avf
 			int width;
 			int height;
 			AVPixelFormat pix_fmt;
+            AVRational frame_rate;
 
 			uint8_t* video_dst_data[4] = { NULL };
 			int      video_dst_linesize[4];
@@ -55,8 +56,6 @@ namespace avf
 			AVFrame* frame{ nullptr };
 			AVPacket* pkt;
             AVPacket* pkt2;
-
-			int video_frame_count{ 0 };
 
             std::thread th_pkt;
             std::thread th_de_frame;
@@ -212,10 +211,11 @@ namespace avf
                     auto picf = frame_queue.writable();
                     if (picf){
                         picf->pts = frame->pts * av_q2d(video_stream->time_base);
-                        av_frame_move_ref(picf->frame, frame);
+                        picf->duration = (frame_rate.num && frame_rate.den ? av_q2d((AVRational){frame_rate.den, frame_rate.num}) : 0);;
                         picf->width = frame->width;
                         picf->height = frame->height;
                         picf->pix_fmt = frame->format;
+                        av_frame_move_ref(picf->frame, frame);
 
                         frame_queue.push();
                         av_frame_unref(frame);
@@ -258,12 +258,11 @@ namespace avf
 				LOG_ERROR("Could not find video stream in the input, aborting");
 				return;
 			}
+            frame_rate = av_guess_frame_rate(fmt_ctx, video_stream, NULL);
 
 			frame = av_frame_alloc();
-			if (!frame) {
-				LOG_ERROR("Could not allocate frame");
-				return;
-			}
+			AV_Assert(frame);
+
 
             pkt = av_packet_alloc();
             pkt2 = av_packet_alloc();

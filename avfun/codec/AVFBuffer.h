@@ -89,6 +89,7 @@ namespace avf {
     struct Frame {
         AVFrame *frame;
         double pts;
+        double duration;
     };
 
     struct PicFrame : public Frame {
