@@ -34,7 +34,9 @@ namespace avf
             virtual void ColseDecoder() = 0;
             virtual AudioParam FetchInfo() = 0;
             virtual SP<AudioFrame> ReadNextFrame() = 0;
-		};
+            virtual SP<AudioFrame> ReadFrameAt(int64_t pos) = 0;
+
+        };
 
 	}
 }

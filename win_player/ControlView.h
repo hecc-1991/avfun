@@ -1,7 +1,8 @@
 #ifndef ControlView_h__
 #define ControlView_h__
 
-#include <AVCommon.h>
+#include "AVCommon.h"
+#include "AVPlayer.h"
 
 using namespace avf;
 
@@ -12,7 +13,9 @@ public:
 	ControlView();
 	~ControlView();
 
-	void Draw();
+    void SetPlayer(SP<AVPlayer> player);
+
+    void Draw();
 
 private:
 	struct Impl;

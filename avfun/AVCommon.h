@@ -8,6 +8,17 @@
 
 namespace avf {
 
+#define PROPERTY(T, _N)     \
+    private:                \
+        T _##_N;            \
+    public:                 \
+        void Set##_N(T v){  \
+            _##_N = v;      \
+        };                  \
+        T Get##_N(){        \
+            return _##_N;   \
+        };
+
     template<typename T>
     using SP = std::shared_ptr<T>;
 

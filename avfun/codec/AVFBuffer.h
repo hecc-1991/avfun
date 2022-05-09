@@ -15,6 +15,7 @@ namespace avf {
     struct PacketNode {
         AVPacket *packet{nullptr};
         PacketNode *next{nullptr};
+        int serial{0};
     };
 
     template<size_t _Size>
@@ -22,11 +23,11 @@ namespace avf {
         PacketNode *first{nullptr}, *last{nullptr};
         int nb_packets{0};
         int size{0};
+        int serial{0};
 
-        std::condition_variable cv_wb;
         std::mutex mtx;
-
         std::condition_variable cv_rb;
+        std::condition_variable cv_wb;
 
 
         void push(AVPacket *packet) {
@@ -38,6 +39,7 @@ namespace avf {
 
             PacketNode *node = (PacketNode *) malloc(sizeof(PacketNode));
             node->packet = av_packet_alloc();
+            node->serial = serial;
             node->next = nullptr;
             av_packet_move_ref(node->packet, packet);
 
@@ -58,7 +60,7 @@ namespace avf {
 
         }
 
-        void peek(AVPacket *packet) {
+        void peek(AVPacket *packet,int& serial) {
             std::unique_lock<std::mutex> lock(mtx);
 
             if (nb_packets == 0 || size == 0) {
@@ -66,7 +68,7 @@ namespace avf {
             }
 
             PacketNode *node = first;
-
+            serial = node->serial;
             first = node->next;
             if (!first) {
                 last = nullptr;
@@ -84,28 +86,56 @@ namespace avf {
 
             cv_wb.notify_one();
         }
+
+        void clear() {
+            std::unique_lock<std::mutex> lock(mtx);
+
+            if (size == 0){
+                return;
+            }
+
+            while (last){
+                PacketNode *node = first;
+
+                first = node->next;
+                if (!first) {
+                    last = nullptr;
+                }
+
+                nb_packets--;
+                size -= sizeof(PacketNode) + node->packet->size;
+
+                av_packet_free(&node->packet);
+                free(node);
+                node = nullptr;
+            }
+
+            cv_wb.notify_one();
+        }
+
     };
 
     struct Frame {
-        AVFrame *frame;
-        double pts;
-        double duration;
+        AVFrame *frame{nullptr};
+        double pts{0};
+        double duration{0};
+        int serial{0};
     };
 
     struct PicFrame : public Frame {
-        int width;
-        int height;
+        int width{0};
+        int height{0};
         int pix_fmt;
     };
 
     struct AudFrame : public Frame{
-        AVFrame *frame;
-        double pts;
-        int sample_rate;
+        AVFrame *frame{nullptr};
+        double pts{0};
+        int sample_rate{0};
         int channels;
         int channel_layout;
         int samp_fmt;
-        int nb_samples;
+        int nb_samples{0};
     };
 
     template<typename T, size_t _Size, typename = std::enable_if_t<std::is_base_of_v<Frame, T>>>

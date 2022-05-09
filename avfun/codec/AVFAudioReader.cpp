@@ -26,6 +26,7 @@ namespace avf
             virtual void ColseDecoder() override;
             virtual AudioParam FetchInfo() override;
             virtual SP<AudioFrame> ReadNextFrame() override;
+            virtual SP<AudioFrame> ReadFrameAt(int64_t pos) override;
 
 		private:
             void read_packet();
@@ -56,7 +57,8 @@ namespace avf
             PacketQueue<AUDIO_PKT_SIZE> pkt_queue;
             AVFFrameQueue<AudFrame,9> frame_queue;
 
-
+            int seek_pos{0};
+            int seek_req{0};
 		};
 
 
@@ -67,6 +69,12 @@ namespace avf
 
                 if(th_pkt_abort)
                     break;
+
+                if(seek_req){
+                    pkt_queue.clear();
+                    avformat_seek_file(fmt_ctx, audio_stream_idx, INT64_MIN, seek_pos, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+                    seek_req = 0;
+                }
 
                 auto res = av_read_frame(fmt_ctx, pkt);
                 if (res != 0) {
@@ -107,7 +115,8 @@ namespace avf
                 } while (ret != AVERROR(EAGAIN));
 
                 {
-                    pkt_queue.peek(pkt2);
+                    int serial;
+                    pkt_queue.peek(pkt2,serial);
                     ret = avcodec_send_packet(audio_dec_ctx, pkt2);
                     av_packet_unref(pkt2);
 
@@ -246,7 +255,16 @@ namespace avf
 
         }
 
-		UP<AudioReader> AudioReader::Make(std::string_view filename) {
+        SP<AudioFrame> AudioReaderInner::ReadFrameAt(int64_t pos) {
+
+            //frame_queue.clear();
+            seek_pos = pos;
+            seek_req = 1;
+
+            return ReadNextFrame();
+        }
+
+        UP<AudioReader> AudioReader::Make(std::string_view filename) {
 			auto p = make_up<AudioReaderInner>(filename);
 			return p;
 		}

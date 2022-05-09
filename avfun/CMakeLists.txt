@@ -34,6 +34,7 @@ set(RENDER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/render)
 
 set(SOURCE_FILE
         ${AVFUN_DIR}/AVCommon.h
+        ${AVFUN_DIR}/Utils.h
         ${AVFUN_DIR}/LogUtil.h
         ${AVFUN_DIR}/AVPlayer.h
         ${AVFUN_DIR}/AVPlayer.cpp

@@ -32,6 +32,8 @@ namespace avf
 			virtual PicFrame* PeekCur() = 0;
 			virtual PicFrame* PeekNext() = 0;
 			virtual void Next() = 0;
+			virtual void NextAt(int64_t pos) = 0;
+            virtual bool Serial() = 0;
 
 		private:
 

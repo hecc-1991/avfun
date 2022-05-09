@@ -32,6 +32,8 @@ namespace avf
             virtual PicFrame* PeekCur() override;
             virtual PicFrame* PeekNext() override;
             virtual void Next() override;
+            virtual void NextAt(int64_t pos) override;
+            virtual bool Serial() override;
 
         private:
 //			void open(std::string_view filename);
@@ -42,7 +44,7 @@ namespace avf
         private:
 			AVFormatContext* fmt_ctx{ nullptr };
 			AVCodecContext* video_dec_ctx{ nullptr };
-			int video_stream_idx;
+			int video_stream_idx{ -1 };
 			AVStream* video_stream{ nullptr };
 
 			int width;
@@ -67,74 +69,10 @@ namespace avf
             PacketQueue<VIDEO_PKT_SIZE> pkt_queue;
             AVFFrameQueue<PicFrame,3> frame_queue;
 
+            int serial{0};
+            int seek_pos{0};
+            int seek_req{0};
         };
-
-/*		void VideoReaderInner::open(std::string_view filename) {
-			*//* open input file, and allocate format context *//*
-            int ret;
-            ret = avformat_open_input(&fmt_ctx, filename.data(), NULL, NULL);
-			if (ret < 0) {
-				LOG_ERROR("Could not open source file %s", filename.data());
-			}
-            AV_Assert(!ret);
-
-			*//* retrieve stream information *//*
-            ret = avformat_find_stream_info(fmt_ctx, NULL);
-			if (ret < 0) {
-				LOG_ERROR("Could not find stream information");
-			}
-            AV_Assert(!ret);
-
-			*//* dump input information to stderr *//*
-			av_dump_format(fmt_ctx, 0, filename.data(), 0);
-		}*/
-
-		/*int VideoReaderInner::open_codec_context(int* stream_idx,
-			AVCodecContext** dec_ctx, AVFormatContext* fmt_ctx, enum AVMediaType type)
-		{
-			int ret, stream_index;
-			AVStream* st;
-			AVDictionary* opts = NULL;
-
-			ret = av_find_best_stream(fmt_ctx, type, -1, -1, NULL, 0);
-			if (ret < 0) {
-				LOG_ERROR("Could not find %s stream",av_get_media_type_string(type));
-				return ret;
-			}
-			else {
-				stream_index = ret;
-				st = fmt_ctx->streams[stream_index];
-
-				*//* find decoder for the stream *//*
-				auto dec = avcodec_find_decoder(st->codecpar->codec_id);
-				if (!dec) {
-					LOG_ERROR("Failed to find %s codec",av_get_media_type_string(type));
-					return AVERROR(EINVAL);
-				}
-
-				*//* Allocate a codec context for the decoder *//*
-				*dec_ctx = avcodec_alloc_context3(dec);
-				if (!*dec_ctx) {
-					LOG_ERROR("Failed to allocate the %s codec context",av_get_media_type_string(type));
-					return AVERROR(ENOMEM);
-				}
-
-				*//* Copy codec parameters from input stream to output codec context *//*
-				if ((ret = avcodec_parameters_to_context(*dec_ctx, st->codecpar)) < 0) {
-					LOG_ERROR("Failed to copy %s codec parameters to decoder context",av_get_media_type_string(type));
-					return ret;
-				}
-
-				*//* Init the decoders *//*
-				if ((ret = avcodec_open2(*dec_ctx, dec, &opts)) < 0) {
-					LOG_ERROR("Failed to open %s codec",av_get_media_type_string(type));
-					return ret;
-				}
-				*stream_idx = stream_index;
-			}
-
-			return 0;
-		}*/
 
         void VideoReaderInner::read_packet() {
             LOG_INFO("## video read_packet");
@@ -143,6 +81,13 @@ namespace avf
 
                 if(th_pkt_abort)
                     break;
+
+                if(seek_req){
+                    pkt_queue.clear();
+                    avformat_seek_file(fmt_ctx, video_stream_idx, INT64_MIN, seek_pos, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+                    seek_req = 0;
+                    pkt_queue.serial++;
+                }
 
                 auto res = av_read_frame(fmt_ctx, pkt);
                 if (res != 0) {
@@ -181,8 +126,19 @@ namespace avf
 
                 } while (ret != AVERROR(EAGAIN));
 
+                do {
+                    int old_serial = serial;
+                    pkt_queue.peek(pkt2,serial);
+                    if (old_serial != serial) {
+                        avcodec_flush_buffers(video_dec_ctx);
+                    }
+
+                    if (pkt_queue.serial == serial)
+                        break;
+                    av_packet_unref(pkt2);
+                } while (1);
+
                 {
-                    pkt_queue.peek(pkt2);
                     ret = avcodec_send_packet(video_dec_ctx, pkt2);
                     av_packet_unref(pkt2);
 
@@ -215,6 +171,7 @@ namespace avf
                         picf->width = frame->width;
                         picf->height = frame->height;
                         picf->pix_fmt = frame->format;
+                        picf->serial = serial;
                         av_frame_move_ref(picf->frame, frame);
 
                         frame_queue.push();
@@ -333,6 +290,17 @@ namespace avf
         void VideoReaderInner::Next() {
             return frame_queue.next();
         }
+
+        void VideoReaderInner::NextAt(int64_t pos) {
+            seek_pos = pos;
+            seek_req = 1;
+        }
+
+        bool VideoReaderInner::Serial() {
+            auto vp = frame_queue.peek_cur();
+            return vp->serial == pkt_queue.serial;
+        }
+
 
         UP<VideoReader> VideoReader::Make(std::string_view filename) {
 			auto p = make_up<VideoReaderInner>(filename);

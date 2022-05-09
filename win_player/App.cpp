@@ -1,5 +1,5 @@
 #include "App.h"
-#include <LogUtil.h>
+#include "LogUtil.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -8,7 +8,12 @@
 #include <SDL.h>
 #include <glad/glad.h>
 
+#include "AVPlayer.h"
+
 #include "ControlView.h"
+#include "SurfaceView.h"
+
+using namespace avf;
 
 #define Window_Width 1280
 #define Window_Height 720
@@ -90,7 +95,7 @@ void AppInner::Run() {
 	}
 
 	// GL 3.0 + GLSL 130
-	const char* glsl_version = "#version 130";
+	const char* glsl_version = "#version 330";
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -100,7 +105,7 @@ void AppInner::Run() {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	SDL_Window* window = SDL_CreateWindow("AVFunPlayer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, Window_Width, Window_Height, window_flags);
 	SDL_Surface* surface;     // Declare an SDL_Surface to be filled in with pixel data from an image file
 	//surface = SDL_CreateRGBSurfaceFrom((void*)pixels, 32, 32, 32, 32*4, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
@@ -151,10 +156,16 @@ void AppInner::Run() {
 	// Our state
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    auto player = make_sp<AVPlayer>();
 
 	auto controlView = make_up<ControlView>();
+	controlView->SetPlayer(player);
 
-	// Main loop
+	auto surfaceView = make_up<SurfaceView>();
+    surfaceView->SetPlayer(player);
+
+
+    // Main loop
 	bool done = false;
 	while (!done)
 	{
@@ -180,16 +191,18 @@ void AppInner::Run() {
 
 		ImGui::ShowDemoWindow();
 
-		//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		controlView->Draw();
-
 
 		// Rendering
 		ImGui::Render();
 		glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT);
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        surfaceView->Draw();
+
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		SDL_GL_SwapWindow(window);
 	}
 
