@@ -7,6 +7,8 @@
 
 #include "ffmpeg_config.h"
 
+#define AVF_TIME_BASE 1000
+
 class Reader {
 public:
 

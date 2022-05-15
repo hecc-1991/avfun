@@ -27,7 +27,7 @@ namespace avf {
 #define SEEK_VIDEO  2
 
     typedef struct Clock {
-        double pts {0};           /* clock base */
+        double pts{0};           /* clock base */
         double pts_drift{0};     /* clock base minus time at which we updated the clock */
         double last_updated{0};
         int serial{-1};           /* clock is based on a packet with this serial */
@@ -58,7 +58,7 @@ namespace avf {
 
     struct AVPlayer::Impl {
 
-        VideoState* videoState;
+        VideoState *videoState;
 
         std::thread _th_devid;
         std::thread _th_deaud;
@@ -66,8 +66,7 @@ namespace avf {
 
         //////////////////////////////////////////////////////////////////////////
 
-        void init_clock(Clock *c)
-        {
+        void init_clock(Clock *c) {
             double time = av_gettime_relative() / 1000000.0;
             c->pts = 0;
             c->last_updated = time;
@@ -90,19 +89,18 @@ namespace avf {
 
         }
 
-        void close_video(){
+        void close_video() {
             videoState = new VideoState();
         }
 
         static void fill_audio(void *udata, Uint8 *stream, int len) {
             VideoState *vs = (VideoState *) udata;
 
-
             double audio_callback_time = av_gettime_relative() / 1000000.0;
 
             memset(stream, 0, len);
 
-            if (vs->paused){
+            if (vs->paused) {
                 return;
             }
 
@@ -111,17 +109,21 @@ namespace avf {
 
                     SP<AudioFrame> af;
 
-                    if(vs->seek_req & SEEK_AUDIO) {
+                    if (vs->seek_req & SEEK_AUDIO) {
                         af = vs->audio_reader->ReadFrameAt(vs->seek_pos);
                         vs->seek_req -= SEEK_AUDIO;
-                        vs->audio_pts = vs->seek_pos;
-                    }else{
+                        vs->audio_pts = vs->seek_pos / 1000.0;
+                    } else {
                         af = vs->audio_reader->ReadNextFrame();
                     }
 
-                    vs->audio_buf = af->buf;
-                    vs->audio_buf_size = af->buf_size;
-                    vs->nb_samples = af->nb_samples;
+                    if (af == nullptr) {
+                        return;
+                    } else {
+                        vs->audio_buf = af->buf;
+                        vs->audio_buf_size = af->buf_size;
+                        vs->nb_samples = af->nb_samples;
+                    }
 
                     vs->audio_buf_index = 0;
                 }
@@ -139,14 +141,13 @@ namespace avf {
 
             }
 
-            auto set_clock_at = [](Clock *c, double pts, double time)
-            {
+            auto set_clock_at = [](Clock *c, double pts, double time) {
                 c->pts = pts;
                 c->last_updated = time;
                 c->pts_drift = c->pts - time;
             };
 
-            set_clock_at(&vs->audclk, vs->audio_pts,  audio_callback_time);
+            set_clock_at(&vs->audclk, vs->audio_pts, audio_callback_time);
 
         }
 
@@ -187,15 +188,9 @@ namespace avf {
             _th_play_aud = std::move(th);
         }
 
-        void checkGLError(int line = -1) {
-            auto err = glGetError();
-            if (err != 0)
-                LOG_ERROR("line: %d, err: %d", line, err);
-        }
+        PicFrame *refresh_video() {
 
-        PicFrame* refresh_video(){
-
-            auto get_clock = [](Clock *c)->double{
+            auto get_clock = [](Clock *c) -> double {
                 if (c->paused) {
                     return c->pts;
                 } else {
@@ -204,8 +199,7 @@ namespace avf {
                 }
             };
 
-            auto set_clock = [](Clock *c, double pts)
-            {
+            auto set_clock = [](Clock *c, double pts) {
                 double time = av_gettime_relative() / 1000000.0;
 
                 c->pts = pts;
@@ -213,52 +207,46 @@ namespace avf {
                 c->pts_drift = c->pts - time;
             };
 
-            auto compute_target_delay = [&](double delay, Clock *vidclk, Clock *audclk)->double{
-                //LOG_INFO("video: V - A = %f - %f\n", get_clock(vidclk), get_clock(audclk));
+            auto compute_target_delay = [&](double delay, Clock *vidclk, Clock *audclk) -> double {
+//                LOG_INFO("video: V - A = %f - %f\n", get_clock(vidclk), get_clock(audclk));
 
                 auto diff = get_clock(vidclk) - get_clock(audclk);
 
 #define AV_SYNC_THRESHOLD_MIN 0.04
 #define AV_SYNC_THRESHOLD_MAX 0.1
                 auto sync_threshold = FFMAX(AV_SYNC_THRESHOLD_MIN, FFMIN(AV_SYNC_THRESHOLD_MAX, delay));
-                if(fabs(diff) < 3600.0){
-                    if(diff <= -sync_threshold)
-                        delay = std::max(0.0,delay + diff);
-                    else if(diff >= sync_threshold && delay > AV_SYNC_THRESHOLD_MAX)
+                if (fabs(diff) < 3600.0) {
+                    if (diff <= -sync_threshold)
+                        delay = std::max(0.0, delay + diff);
+                    else if (diff >= sync_threshold && delay > AV_SYNC_THRESHOLD_MAX)
                         delay += diff;
-                    else if(diff >= sync_threshold)
+                    else if (diff >= sync_threshold)
                         delay *= 2;
                 }
 
-                LOG_INFO("video: delay=%0.3f A-V=%f\n", delay, -diff);
+//                LOG_INFO("video: delay=%0.3f A-V=%f\n", delay, -diff);
 
                 return delay;
             };
 
 
-            auto vp_duration = [&](PicFrame* vp,PicFrame* nextvp)->double{
+            auto vp_duration = [&](PicFrame *vp, PicFrame *nextvp) -> double {
                 if (vp->serial == nextvp->serial) {
                     auto duration = nextvp->pts - vp->pts;
                     if (duration <= 0)
                         return vp->duration;
                     return duration;
-                }else{
+                } else {
                     return 0;
                 }
             };
 
             retry:
-            if (videoState->video_reader->NbRemaining() > 0){
+            if (videoState->video_reader->NbRemaining() > 0) {
                 auto lastvp = videoState->video_reader->PeekLast();
                 auto vp = videoState->video_reader->PeekCur();
 
-                if(videoState->seek_req & SEEK_VIDEO) {
-                    videoState->video_reader->NextAt(videoState->seek_pos);
-                    videoState->seek_req -= SEEK_VIDEO;
-                    goto retry;
-                }
-
-                if(!videoState->video_reader->Serial()){
+                if (!videoState->video_reader->Serial()) {
                     videoState->video_reader->Next();
                     goto retry;
                 }
@@ -266,23 +254,23 @@ namespace avf {
                 if (lastvp->serial != vp->serial)
                     videoState->frame_timer = av_gettime_relative() / 1000000.0;
 
-                if (videoState->paused){
+                if (videoState->paused) {
                     goto display;
                 }
 
-                auto last_duration = vp_duration(lastvp,vp);
-                auto delay = compute_target_delay(last_duration,&videoState->vidclk,&videoState->audclk);
+                auto last_duration = vp_duration(lastvp, vp);
+                auto delay = compute_target_delay(last_duration, &videoState->vidclk, &videoState->audclk);
 
 
-                auto time= av_gettime_relative()/1000000.0;
+                auto time = av_gettime_relative() / 1000000.0;
                 // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
-                if(time < videoState->frame_timer + delay){
+                if (time < videoState->frame_timer + delay) {
                     goto display;
                 }
 
                 videoState->frame_timer += delay;
                 // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
-                if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX){
+                if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX) {
                     videoState->frame_timer = time;
                 }
 
@@ -292,9 +280,9 @@ namespace avf {
                 // 是否要丢弃未能及时播放的视频帧
                 if (videoState->video_reader->NbRemaining() > 1) {
                     auto nextvp = videoState->video_reader->PeekNext();
-                    auto duration = vp_duration(vp,nextvp);
+                    auto duration = vp_duration(vp, nextvp);
 
-                    if(time > videoState->frame_timer + duration){
+                    if (time > videoState->frame_timer + duration) {
                         videoState->video_reader->Next();
                         goto retry;
                     }
@@ -304,16 +292,22 @@ namespace avf {
 
             }
 
+            if (videoState->seek_req & SEEK_VIDEO) {
+                videoState->video_reader->NextAt(videoState->seek_pos);
+                videoState->seek_req -= SEEK_VIDEO;
+                goto retry;
+            }
+
             display:
-             return videoState->video_reader->PeekLast();
+            return videoState->video_reader->PeekLast();
         }
 
-        void pause(){
+        void pause() {
             videoState->paused = !videoState->paused;
         }
 
-        void seek(int64_t time_ms){
-            if(!videoState->seek_req){
+        void seek(int64_t time_ms) {
+            if (!videoState->seek_req) {
                 videoState->seek_pos = time_ms;
                 videoState->seek_req = SEEK_AUDIO + SEEK_VIDEO;
             }
@@ -326,11 +320,11 @@ namespace avf {
             _th_play_aud.join();
         }
 
-        AVFSizei getSize(){
+        AVFSizei getSize() {
             return videoState->video_reader->GetSize();
         }
 
-        int getFrame(SP<avf::codec::AVVideoFrame> frame){
+        int getFrame(SP<avf::codec::AVVideoFrame> frame) {
             auto f = refresh_video();
             //LOG_INFO("peek frame:[%dx%d] -- %lf", f->width, f->height, f->pts);
 
@@ -339,7 +333,15 @@ namespace avf {
             auto vparam = videoState->video_reader->GetParam();
 
             frame->Convert(f->frame->data, f->frame->linesize,
-                            (avf::codec::VFrameFmt) vparam.pix_fmt);
+                           (avf::codec::VFrameFmt) vparam.pix_fmt);
+        }
+
+        double getDuration(){
+            return videoState->video_reader->GetDuration();
+        }
+
+        double getProgress(){
+            return videoState->audio_pts;
         }
     };
 
@@ -366,21 +368,28 @@ namespace avf {
     void AVPlayer::Pause() {
         _impl->pause();
 
-        _Stat = PLAYER_STAT::PAUSE;
+        _Stat = _Stat == PLAYER_STAT::PLAYING ? PLAYER_STAT::PAUSE : PLAYER_STAT::PLAYING;
     }
 
     void AVPlayer::Seek(int64_t time_ms) {
         _impl->seek(time_ms);
     }
 
-    AVFSizei AVPlayer::GetSize()
-    {
+    AVFSizei AVPlayer::GetSize() {
         return _impl->getSize();
     }
 
-    int AVPlayer::GetFrame(SP<avf::codec::AVVideoFrame> frame)
-    {
+    int AVPlayer::GetFrame(SP<avf::codec::AVVideoFrame> frame) {
         return _impl->getFrame(frame);
     }
+
+    double AVPlayer::GetDuration(){
+        return _impl->getDuration();
+    }
+
+    double AVPlayer::GetProgress(){
+        return _impl->getProgress();
+    }
+
 
 }

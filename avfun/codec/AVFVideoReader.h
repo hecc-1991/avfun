@@ -26,7 +26,8 @@ namespace avf
             virtual void ColseDecoder() = 0;
 			virtual AVFSizei GetSize() = 0;
 			virtual VideoParam GetParam() = 0;
-			virtual SP<AVVideoFrame>  ReadNextFrame() = 0;
+            virtual double GetDuration() = 0;
+            virtual SP<AVVideoFrame>  ReadNextFrame() = 0;
 			virtual int NbRemaining() = 0;
 			virtual PicFrame* PeekLast() = 0;
 			virtual PicFrame* PeekCur() = 0;

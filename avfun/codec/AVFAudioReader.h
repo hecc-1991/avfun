@@ -22,6 +22,7 @@ namespace avf
             uint8_t* buf;
             unsigned int buf_size;
             int nb_samples;
+            double pts;
         };
 
 		class AudioReader

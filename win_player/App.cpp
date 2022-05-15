@@ -189,9 +189,9 @@ void AppInner::Run() {
 		ImGui_ImplSDL2_NewFrame(window);
 		ImGui::NewFrame();
 
-		ImGui::ShowDemoWindow();
+//		ImGui::ShowDemoWindow();
 
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+//		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		controlView->Draw();
 
 		// Rendering

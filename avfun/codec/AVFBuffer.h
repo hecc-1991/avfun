@@ -63,7 +63,7 @@ namespace avf {
         void peek(AVPacket *packet,int& serial) {
             std::unique_lock<std::mutex> lock(mtx);
 
-            if (nb_packets == 0 || size == 0) {
+            while (nb_packets == 0 || size == 0) {
                 cv_rb.wait(lock);
             }
 

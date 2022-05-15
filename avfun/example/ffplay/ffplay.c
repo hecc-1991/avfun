@@ -621,7 +621,10 @@ static int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub) {
                         }
                         break;
                 }
+                printf("hecc--ret:%d \n",ret);
+
                 if (ret == AVERROR_EOF) {
+                    printf("hecc--eof \n");
                     d->finished = d->pkt_serial;
                     avcodec_flush_buffers(d->avctx);
                     return 0;
@@ -637,9 +640,13 @@ static int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub) {
             if (d->packet_pending) {
                 d->packet_pending = 0;
             } else {
+                printf("hecc--01 \n");
+
                 int old_serial = d->pkt_serial;
                 if (packet_queue_get(d->queue, d->pkt, 1, &d->pkt_serial) < 0)
                     return -1;
+                printf("hecc--02 \n");
+
                 if (old_serial != d->pkt_serial) {
                     avcodec_flush_buffers(d->avctx);
                     d->finished = 0;
@@ -647,8 +654,11 @@ static int decoder_decode_frame(Decoder *d, AVFrame *frame, AVSubtitle *sub) {
                     d->next_pts_tb = d->start_pts_tb;
                 }
             }
+            printf("hecc--03 \n");
+
             if (d->queue->serial == d->pkt_serial)
                 break;
+
             av_packet_unref(d->pkt);
         } while (1);
 
@@ -1545,8 +1555,8 @@ static double compute_target_delay(double delay, VideoState *is)
         }
     }
 
-    av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
-            delay, -diff);
+    //av_log(NULL, AV_LOG_TRACE, "video: delay=%0.3f A-V=%f\n",
+    //        delay, -diff);
 
     return delay;
 }
@@ -1714,7 +1724,7 @@ display:
                 av_diff = get_master_clock(is) - get_clock(&is->audclk);
 
             av_bprint_init(&buf, 0, AV_BPRINT_SIZE_AUTOMATIC);
-            av_bprintf(&buf,
+            /*av_bprintf(&buf,
                       "%7.2f %s:%7.3f fd=%4d aq=%5dKB vq=%5dKB sq=%5dB f=%"PRId64"/%"PRId64"   \r",
                       get_master_clock(is),
                       (is->audio_st && is->video_st) ? "A-V" : (is->video_st ? "M-V" : (is->audio_st ? "M-A" : "   ")),
@@ -1724,7 +1734,7 @@ display:
                       vqsize / 1024,
                       sqsize,
                       is->video_st ? is->viddec.avctx->pts_correction_num_faulty_dts : 0,
-                      is->video_st ? is->viddec.avctx->pts_correction_num_faulty_pts : 0);
+                      is->video_st ? is->viddec.avctx->pts_correction_num_faulty_pts : 0);*/
 
             if (show_status == 1 && AV_LOG_INFO > av_log_get_level())
                 fprintf(stderr, "%s", buf.str);
@@ -2958,6 +2968,7 @@ static int read_thread(void *arg)
 // FIXME the +-2 is due to rounding being not done in the correct direction in generation
 //      of the seek_pos/seek_rel variables
 
+            //printf("hecc--seek_target:%lld < %lld < %lld\n",seek_min,seek_target,seek_max);
             ret = avformat_seek_file(is->ic, -1, seek_min, seek_target, seek_max, is->seek_flags);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR,
@@ -2975,6 +2986,7 @@ static int read_thread(void *arg)
                    set_clock(&is->extclk, seek_target / (double)AV_TIME_BASE, 0);
                 }
             }
+
             is->seek_req = 0;
             is->queue_attachments_req = 1;
             is->eof = 0;

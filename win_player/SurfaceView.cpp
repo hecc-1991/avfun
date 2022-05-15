@@ -28,10 +28,18 @@ struct SurfaceView::Impl
 
     SP<avf::codec::AVVideoFrame> vframe;
 
+    bool isInit{false};
+
     void init();
 
     void draw();
 };
+
+void checkGLError(int line = -1) {
+    auto err = glGetError();
+    if (err != 0)
+        LOG_ERROR("line: %d, err: %d", line, err);
+}
 
 void SurfaceView::Impl::init(){
 
@@ -61,8 +69,8 @@ void main()
 )";
 
 
-    //auto size = player->GetSize();
-    AVFSizei size = {720,1270};
+    auto size = player->GetSize();
+    //AVFSizei size = {1202,720};
 
     auto vertices = Utils::FitIn(WINDOW_WIGTH, WINDOW_HEIGTH, size.width, size.height);
 
@@ -102,6 +110,11 @@ void SurfaceView::Impl::draw() {
     if (player->GetStat() < PLAYER_STAT::INIT)
         return;
 
+    if(!isInit){
+        init();
+        isInit = true;
+    }
+
     //glClearColor(0.2f, 0.3f, 0.3f, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -130,7 +143,6 @@ void SurfaceView::Impl::draw() {
 
 void SurfaceView::SetPlayer(SP<AVPlayer> player) {
     _impl->player = player;
-    _impl->init();
 }
 
 

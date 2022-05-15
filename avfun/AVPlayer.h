@@ -37,6 +37,10 @@ namespace avf
 
         int GetFrame(SP<codec::AVVideoFrame> frame);
 
+        double GetDuration();
+
+        double GetProgress();
+
     PROPERTY(PLAYER_STAT,Stat);
 
     private:

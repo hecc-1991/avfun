@@ -1,70 +1,93 @@
 #include "ControlView.h"
 #include "imgui/imgui.h"
+#include "imgui/ImGuiFileDialog.h"
 
 
-
-struct ControlView::Impl
-{
-	float progress{ 0 };
+struct ControlView::Impl {
+    float progress{0};
     SP<AVPlayer> player;
 
-	void draw();
+    void draw();
 };
 
 void ControlView::Impl::draw() {
-	ImGuiWindowFlags window_flags = 0;
-	window_flags |= ImGuiWindowFlags_NoTitleBar;
-	window_flags |= ImGuiWindowFlags_NoMove;
-	window_flags |= ImGuiWindowFlags_NoResize;
-	//window_flags |= ImGuiWindowFlags_NoBackground;
 
-    ImGui::Begin("My First Tool", NULL, ImGuiWindowFlags_MenuBar);
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("File"))
-        {
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_None);
+    ImGui::SetNextWindowSize(ImVec2(1280, 60), ImGuiCond_None);
+    ImGui::Begin("navi", NULL, ImGuiWindowFlags_MenuBar |
+                               ImGuiWindowFlags_NoTitleBar |
+                               ImGuiWindowFlags_NoMove |
+                               ImGuiWindowFlags_NoBackground |
+                               ImGuiWindowFlags_NoDecoration);
+
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open..", "Ctrl+O")) {
-                player->OpenVideo("/Users/hecc/Documents/hecc/dev/avfun/resources/sanguo.mp4");
-                player->Play();
+                ImGuiFileDialog::Instance()->OpenDialog("videoIn", "Choose Video File", ".mp4", ".");
             }
-            if (ImGui::MenuItem("Save", "Ctrl+S"))   { /* Do stuff */ }
+            if (ImGui::MenuItem("Save", "Ctrl+S")) { /* Do stuff */ }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Edit")) {
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
     }
     ImGui::End();
 
-	ImGui::SetNextWindowPos(ImVec2(0, 620), ImGuiCond_None);
-	ImGui::SetNextWindowSize(ImVec2(1280, 100), ImGuiCond_None);
-	ImGui::Begin("control_view", NULL, window_flags);
+    // display
+    if (ImGuiFileDialog::Instance()->Display("videoIn", ImGuiWindowFlags_NoCollapse, ImVec2(640, 360),
+                                             ImVec2(1280, 720))) {
+        // action if OK
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            // action
+            player->OpenVideo(filePathName);
+            player->Play();
+        }
 
-	ImGui::SetCursorPosX(40);
-	ImGui::PushItemWidth(1200);
-	ImGui::SliderFloat("", &progress, 0.0f, 1.0f);
-	ImGui::PopItemWidth();
+        // close
+        ImGuiFileDialog::Instance()->Close();
+    }
 
-	ImGui::NewLine();
+    ImGui::SetNextWindowPos(ImVec2(0, 670), ImGuiCond_None);
+    ImGui::SetNextWindowSize(ImVec2(1280, 50), ImGuiCond_None);
+    ImGui::SetNextWindowBgAlpha(.8);
+    ImGui::Begin("control_view", NULL, ImGuiWindowFlags_NoTitleBar |
+                                       ImGuiWindowFlags_NoMove |
+                                       ImGuiWindowFlags_NoResize);
 
-	ImGui::SetCursorPosX(590);
+    ImGui::SetCursorPos(ImVec2(80, 15));
+    ImGui::PushItemWidth(1180);
 
-    if (ImGui::Button("play/pause", ImVec2(80,40)))
-    {
-        if(player != nullptr)
-        {
+    if (player != nullptr) {
+        if (player->GetStat() >= PLAYER_STAT::INIT) {
+            progress = player->GetProgress() / player->GetDuration();
+        }
+    }
+    float new_progress = progress;
+    ImGui::SliderFloat("", &new_progress, 0.0f, 1.0f, "");
+
+    if (progress != new_progress) {
+            if (player->GetStat() >= PLAYER_STAT::INIT) {
+                player->Pause();
+                auto ts = int64_t(new_progress * player->GetDuration() * 1000);
+                player->Seek(ts);
+                player->Pause();
+            }
+    }
+    ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+    ImGui::SetCursorPos(ImVec2(10, 10));
+    if (ImGui::Button(player->GetStat() != PLAYER_STAT::PAUSE ? "play" : "pause", ImVec2(60, 30))) {
+        if (player->GetStat() >= PLAYER_STAT::INIT) {
             player->Pause();
         }
     }
 
-    if (ImGui::Button("seek", ImVec2(80,40)))
-    {
-        if(player != nullptr)
-        {
-            player->Seek(0);
-        }
-    }
-
-	ImGui::End();
-
+    ImGui::End();
 }
 
 
@@ -73,11 +96,11 @@ void ControlView::SetPlayer(SP<AVPlayer> player) {
 }
 
 void ControlView::Draw() {
-	_impl->draw();
+    _impl->draw();
 }
 
-ControlView::ControlView():_impl(make_up<ControlView::Impl>()) {
-	
+ControlView::ControlView() : _impl(make_up<ControlView::Impl>()) {
+
 }
 
 ControlView::~ControlView() {
