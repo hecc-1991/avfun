@@ -12,6 +12,8 @@ namespace avf {
     namespace codec {
 
 #define VIDEO_PKT_SIZE (4 * 1024 * 1024)
+#define SEEK_VIDEO_PACKET   1
+#define SEEK_VIDEO_FRAME    2
 
         class VideoReaderInner : public VideoReader, Reader {
 
@@ -99,15 +101,16 @@ namespace avf {
                 if (th_pkt_abort)
                     break;
 
-                if (seek_req) {
+                if (seek_req & SEEK_VIDEO_PACKET) {
                     pkt_queue.clear();
                     auto ts = seek_pos * AVF_TIME_BASE;
                     avformat_seek_file(fmt_ctx, -1, INT64_MIN, ts, INT64_MAX, 0);
-                    seek_req = 0;
+                    seek_req -= SEEK_VIDEO_PACKET;
                     pkt_queue.serial++;
                 }
 
                 auto ret = av_read_frame(fmt_ctx, pkt);
+
                 if (ret < 0) {
                     if ((ret == AVERROR_EOF || avio_feof(fmt_ctx->pb)) && !eof) {
                         LOG_WARNING("##read video pkt eof");
@@ -122,6 +125,7 @@ namespace avf {
                 } else {
                     eof = 0;
                 }
+
                 if (pkt->stream_index == video_stream_idx) {
                     pkt_queue.push(pkt);
                 }
@@ -187,6 +191,26 @@ namespace avf {
                     break;
 
                 auto ret = decode_packet();
+
+                if (seek_req & SEEK_VIDEO_FRAME) {
+                    while (frame_queue.nb_remaining() > 0) {
+                        frame_queue.next();
+                    }
+
+                    while (true) {
+                        auto pts = frame->pts * av_q2d(video_stream->time_base) * 1000;
+                        auto duration = av_q2d((AVRational) {frame_rate.den, frame_rate.num}) * 1000;
+
+                        if (abs(seek_pos - pts) <= duration) {
+                            break;
+                        }
+                        av_frame_unref(frame);
+                        ret = decode_packet();
+                    }
+
+                    seek_req -= SEEK_VIDEO_FRAME;
+                    continue;
+                }
 
                 if (!ret) {
 
@@ -322,7 +346,7 @@ namespace avf {
 
         void VideoReaderInner::NextAt(int64_t pos) {
             seek_pos = pos;
-            seek_req = 1;
+            seek_req = SEEK_VIDEO_PACKET + SEEK_VIDEO_FRAME;
             cv_continue_read.notify_one();
         }
 

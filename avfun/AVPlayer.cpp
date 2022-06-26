@@ -138,7 +138,6 @@ namespace avf {
                 len -= len1;
 
                 vs->audio_pts += 1.0 * vs->nb_samples / SUPPORT_AUDIO_SAMPLE_RATE * len1 / vs->audio_buf_size;
-
             }
 
             auto set_clock_at = [](Clock *c, double pts, double time) {
@@ -292,13 +291,14 @@ namespace avf {
 
             }
 
+
             if (videoState->seek_req & SEEK_VIDEO) {
                 videoState->video_reader->NextAt(videoState->seek_pos);
                 videoState->seek_req -= SEEK_VIDEO;
                 goto retry;
             }
 
-            display:
+        display:
             return videoState->video_reader->PeekLast();
         }
 

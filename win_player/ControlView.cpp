@@ -2,10 +2,13 @@
 #include "imgui/imgui.h"
 #include "imgui/ImGuiFileDialog.h"
 
+#include <chrono>
 
 struct ControlView::Impl {
     float progress{0};
     SP<AVPlayer> player;
+
+    int64_t last_seek_ts{0};
 
     void draw();
 };
@@ -70,12 +73,19 @@ void ControlView::Impl::draw() {
     ImGui::SliderFloat("", &new_progress, 0.0f, 1.0f, "");
 
     if (progress != new_progress) {
+
+        auto now = std::chrono::system_clock::now();
+        auto seek_ts = std::chrono::time_point_cast<std::chrono::milliseconds>(now).time_since_epoch().count();
+        constexpr int MIN_SEEK_INTERVAL = 100;
+        if ((seek_ts - last_seek_ts) > MIN_SEEK_INTERVAL) {
             if (player->GetStat() >= PLAYER_STAT::INIT) {
                 player->Pause();
                 auto ts = int64_t(new_progress * player->GetDuration() * 1000);
                 player->Seek(ts);
                 player->Pause();
             }
+        }
+        last_seek_ts = seek_ts;
     }
     ImGui::PopItemWidth();
 
