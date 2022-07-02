@@ -3,8 +3,12 @@ set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 set(ffmpeg_DIR ${THIRD_PARTY_DIR}/ffmpeg_build)
 set(ffmpeg_INCLUDE ${THIRD_PARTY_DIR}/ffmpeg_build/include)
 
+if(AVF_MACOS)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -liconv -lm -llzma -lz -framework AudioToolbox -pthread -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -lm -lbz2 -lz -Wl,-framework,CoreFoundation -Wl,-framework,Security")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -lm -latomic")
+endif()
 
 add_library(avcodec STATIC IMPORTED)
 set_target_properties(avcodec PROPERTIES
@@ -49,4 +53,4 @@ set_target_properties(swscale PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${ffmpeg_INCLUDE}"
         )
 
-set(FFMPEG_LIBS avcodec avdevice avfilter avformat avutil swresample swscale)
+set(FFMPEG_LIBS avformat avcodec avdevice avfilter avutil swresample swscale)

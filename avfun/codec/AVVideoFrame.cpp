@@ -1,4 +1,5 @@
 #include "AVVideoFrame.h"
+#include <string.h>
 #include <libyuv.h>
 #include "LogUtil.h"
 

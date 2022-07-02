@@ -57,6 +57,8 @@ namespace avf
             AV_Assert(len);
             out->nb_samples = len;
             out->buf_size = len * SUPPORT_AUDIO_CHANNELS * av_get_bytes_per_sample(SUPPORT_AUDIO_SAMPLE_FMT);
+
+            return 0;
         }
 
 		uint8_t** AudioResample::Impl::data() {

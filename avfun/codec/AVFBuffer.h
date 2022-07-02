@@ -6,6 +6,7 @@
 #define AVFUN_AVFBUFFER_H
 
 #include <mutex>
+#include <condition_variable>
 
 #include "ffmpeg_config.h"
 #include "LogUtil.h"

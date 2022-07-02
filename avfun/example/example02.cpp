@@ -62,7 +62,7 @@ int main(int argc,char* argv[]) {
 
 	/* Load the audio data ... */
 
-	constexpr auto video_filename = "/Users/hecc/Documents/hecc/dev/avfun/resources/yangguang.mp4";
+	constexpr auto video_filename = "/home//hecc/develop/source/avfun/resources/audio01.mp3";
 
 	auto ar = AudioReader::Make(video_filename);
 	ar->SetupDecoder();

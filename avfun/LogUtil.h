@@ -6,7 +6,7 @@
 namespace avf
 {
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__linux__)  || defined(__APPLE__)
 
 #define LOG_INFO(format,...) fprintf(stdout, "[info]#avfun# %s:%d(%s)::"#format"\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
 #define LOG_DEBUG(format,...) fprintf(stdout, "[debug]#avfun# %s:%d(%s)::"#format"\n",__FILE__,__LINE__,__func__,##__VA_ARGS__)
@@ -17,7 +17,7 @@ namespace avf
 
 #else
 
-#endif // _WIN32
+#endif
 
 #define AV_Assert(expression)                                                              \
             if(!expression) {                                                               \

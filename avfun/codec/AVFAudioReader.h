@@ -11,7 +11,7 @@ namespace avf
         struct AudioParam {
             int sample_rate;
             int channels;
-            int channel_layout;
+            uint64_t channel_layout;
             int sample_fmt;
             int nb_samples;
         };

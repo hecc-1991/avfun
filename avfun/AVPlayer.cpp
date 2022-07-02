@@ -181,7 +181,6 @@ namespace avf {
         }
 
         void playAudio() {
-            //解复用线程
             std::thread th(&AVPlayer::Impl::play_audio, this);
 
             _th_play_aud = std::move(th);
@@ -262,21 +261,17 @@ namespace avf {
 
 
                 auto time = av_gettime_relative() / 1000000.0;
-                // 当前帧播放时刻(is->frame_timer+delay)大于当前时刻(time)，表示播放时刻未到
                 if (time < videoState->frame_timer + delay) {
                     goto display;
                 }
 
                 videoState->frame_timer += delay;
-                // 校正frame_timer值：若frame_timer落后于当前系统时间太久(超过最大同步域值)，则更新为当前系统时间
                 if (delay > 0 && time - videoState->frame_timer > AV_SYNC_THRESHOLD_MAX) {
                     videoState->frame_timer = time;
                 }
 
-                // 更新视频时钟：时间戳、时钟时间
                 set_clock(&videoState->vidclk, vp->pts);
 
-                // 是否要丢弃未能及时播放的视频帧
                 if (videoState->video_reader->NbRemaining() > 1) {
                     auto nextvp = videoState->video_reader->PeekNext();
                     auto duration = vp_duration(vp, nextvp);
@@ -334,6 +329,8 @@ namespace avf {
 
             frame->Convert(f->frame->data, f->frame->linesize,
                            (avf::codec::VFrameFmt) vparam.pix_fmt);
+
+            return 0;
         }
 
         double getDuration(){
@@ -346,7 +343,9 @@ namespace avf {
     };
 
 
-    AVPlayer::AVPlayer() : _impl(make_up<Impl>()) {}
+    AVPlayer::AVPlayer() : _impl(make_up<Impl>()) {
+        _Stat = PLAYER_STAT::NONE;
+    }
 
     AVPlayer::~AVPlayer() {}
 
