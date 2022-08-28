@@ -1,5 +1,5 @@
-#ifndef GLProgram_h__
-#define GLProgram_h__
+#ifndef AVFUN_GLPROGRAM_H
+#define AVFUN_GLPROGRAM_H
 
 #include <AVCommon.h>
 
@@ -28,4 +28,4 @@ namespace avf
 	}
 }
 
-#endif // GLProgram_h__
+#endif

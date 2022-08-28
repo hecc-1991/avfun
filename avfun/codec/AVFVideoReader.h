@@ -43,4 +43,4 @@ namespace avf
 	}
 }
 
-#endif // AVVideoReader_h__
+#endif

@@ -4,7 +4,6 @@
 #include <mutex>
 #include <algorithm>
 #include <chrono>
-#include <array>
 
 #include <SDL.h>
 
@@ -60,8 +59,6 @@ namespace avf {
 
         VideoState *videoState;
 
-        std::thread _th_devid;
-        std::thread _th_deaud;
         std::thread _th_play_aud;
 
         //////////////////////////////////////////////////////////////////////////
@@ -309,9 +306,6 @@ namespace avf {
         }
 
         void wait() {
-            _th_devid.join();
-            _th_deaud.join();
-
             _th_play_aud.join();
         }
 

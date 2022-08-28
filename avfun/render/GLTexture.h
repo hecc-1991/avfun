@@ -1,5 +1,5 @@
-#ifndef GLTexture_h__
-#define GLTexture_h__
+#ifndef AVFUN_GLTEXTURE_H
+#define AVFUN_GLTEXTURE_H
 
 #include <AVCommon.h>
 
@@ -37,4 +37,4 @@ namespace avf
 	}
 }
 
-#endif // GLTexture_h__
+#endif

@@ -1,5 +1,5 @@
-#ifndef AVCommon_h__
-#define AVCommon_h__
+#ifndef AVFUN_AVCOMMON_H
+#define AVFUN_AVCOMMON_H
 
 #include <string>
 #include <memory>
@@ -47,4 +47,4 @@ namespace avf {
 }
 
 
-#endif // AVCommon_h__
+#endif

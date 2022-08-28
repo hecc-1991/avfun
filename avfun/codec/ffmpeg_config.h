@@ -1,9 +1,9 @@
-#ifndef ffmpeg_config_h__
-#define ffmpeg_config_h__
+#ifndef AVFUN_FFMPEG_CONFIG_H
+#define AVFUN_FFMPEG_CONFIG_H
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif
 
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -19,7 +19,7 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif
 
 #define SUPPORT_AUDIO_SAMPLE_RATE		44100
 #define SUPPORT_AUDIO_CHANNELS			1
@@ -28,4 +28,4 @@ extern "C" {
 #define SUPPORT_AUDIO_SAMPLE_FMT		AV_SAMPLE_FMT_S16
 #define SUPPORT_AUDIO_SAMPLE_NUM		1024
 
-#endif // ffmpeg_config_h__
+#endif

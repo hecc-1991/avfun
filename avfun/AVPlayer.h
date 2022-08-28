@@ -1,7 +1,6 @@
-#ifndef AVPlayer_h__
-#define AVPlayer_h__
+#ifndef AVFUN_AVPLAYER_H
+#define AVFUN_AVPLAYER_H
 
-#include <string>
 #include "AVCommon.h"
 
 namespace avf
@@ -46,9 +45,7 @@ namespace avf
     private:
 		struct Impl;
 		UP<Impl> _impl;
-
-
     };
 }
 
-#endif // AVPlayer_h__
+#endif

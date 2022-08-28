@@ -42,4 +42,4 @@ namespace avf
 	}
 }
 
-#endif // AVAudioReader_h__
+#endif

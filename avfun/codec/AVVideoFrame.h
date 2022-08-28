@@ -1,5 +1,5 @@
-#ifndef AVVideoFrame_h__
-#define AVVideoFrame_h__
+#ifndef AVFUN_AVVIDEOFRAME_H
+#define AVFUN_AVVIDEOFRAME_H
 
 #include "AVCommon.h"
 
@@ -41,4 +41,4 @@ namespace avf
 	}
 }
 
-#endif // AVVideoFrame_h__
+#endif

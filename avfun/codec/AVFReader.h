@@ -1,7 +1,3 @@
-//
-// Created by 何澄澄 on 2022/2/9.
-//
-
 #ifndef AVFUN_AVFREADER_H
 #define AVFUN_AVFREADER_H
 
@@ -77,4 +73,4 @@ public:
 };
 
 
-#endif //AVFUN_AVFREADER_H
+#endif

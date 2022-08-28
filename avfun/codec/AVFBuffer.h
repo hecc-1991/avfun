@@ -1,7 +1,3 @@
-//
-// Created by 何澄澄 on 2022/2/8.
-//
-
 #ifndef AVFUN_AVFBUFFER_H
 #define AVFUN_AVFBUFFER_H
 
@@ -293,4 +289,4 @@ namespace avf {
 }
 
 
-#endif //AVFUN_MASTER_AVFBUFFER_H
+#endif
