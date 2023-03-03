@@ -20,7 +20,7 @@ namespace avf {
         public:
             VideoReaderInner(std::string_view filename);
 
-            ~VideoReaderInner();
+            virtual ~VideoReaderInner();
 
             virtual void SetupDecoder() override;
 
@@ -66,9 +66,6 @@ namespace avf {
             AVPixelFormat pix_fmt;
             AVRational frame_rate;
             int64_t duration;
-
-            uint8_t *video_dst_data[4] = {NULL};
-            int video_dst_linesize[4];
 
             AVFrame *frame{nullptr};
             AVPacket *pkt;
@@ -253,9 +250,6 @@ namespace avf {
                 pix_fmt = video_dec_ctx->pix_fmt;
                 duration = fmt_ctx->duration;
 
-                int ret = av_image_alloc(video_dst_data, video_dst_linesize,
-                                         width, height, pix_fmt, 1);
-
                 if (ret < 0) {
                     LOG_ERROR("Could not allocate raw video buffer");
                     return;
@@ -287,7 +281,6 @@ namespace avf {
             av_frame_free(&frame);
             av_packet_free(&pkt);
             av_packet_free(&pkt2);
-            av_free(video_dst_data[0]);
 
             th_pkt_abort = true;
             th_pkt.join();

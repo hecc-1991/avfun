@@ -8,10 +8,20 @@ set(CMAKE_CXX_STANDARD 17)
 set(AVFUN_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 include(${AVFUN_ROOT}/cmake/platform.cmake)
-include(${AVFUN_ROOT}/cmake/sdl.cmake)
-include(${AVFUN_ROOT}/cmake/opencv.cmake)
-include(${AVFUN_ROOT}/cmake/libyuv.cmake)
-include(${AVFUN_ROOT}/cmake/ffmpeg.cmake)
+include(${AVFUN_ROOT}/cmake/utils.cmake)
+
+if(AVF_WIN32 OR AVF_LINUX OR AVF_MACOS)
+    include(${AVFUN_ROOT}/cmake/sdl.cmake)
+    include(${AVFUN_ROOT}/cmake/opencv.cmake)
+    include(${AVFUN_ROOT}/cmake/libyuv.cmake)
+    include(${AVFUN_ROOT}/cmake/ffmpeg.cmake)
+elseif(AVF_ANDROID)
+    include(${AVFUN_ROOT}/cmake/opencv.cmake)
+    include(${AVFUN_ROOT}/cmake/libyuv.cmake)
+    include(${AVFUN_ROOT}/cmake/ffmpeg.cmake)
+else()
+
+endif()
 
 ####################### glad #######################
 if (AVF_WIN32)
@@ -41,26 +51,43 @@ set(SOURCE_FILE
         ${AVFUN_DIR}/Utils.h
         ${AVFUN_DIR}/LogUtil.h
         ${AVFUN_DIR}/AVPlayer.h
-        ${AVFUN_DIR}/AVPlayer.cpp
 
         ${CODEC_DIR}/AVFBuffer.h
         ${CODEC_DIR}/ffmpeg_config.h
         ${CODEC_DIR}/AVFReader.h
         ${CODEC_DIR}/AVFAudioReader.h
-        ${CODEC_DIR}/AVFAudioReader.cpp
         ${CODEC_DIR}/AVFAudioResample.h
         ${CODEC_DIR}/AVFAudioResample.cpp
         ${CODEC_DIR}/AVVideoFrame.h
         ${CODEC_DIR}/AVVideoFrame.cpp
         ${CODEC_DIR}/AVFVideoReader.h
-        ${CODEC_DIR}/AVFVideoReader.cpp
-
 
         ${RENDER_DIR}/GLProgram.h
         ${RENDER_DIR}/GLProgram.cpp
         ${RENDER_DIR}/GLTexture.h
         ${RENDER_DIR}/GLTexture.cpp
         )
+
+if(AVF_WIN32 OR AVF_LINUX OR AVF_MACOS)
+
+    list(APPEND SOURCE_FILE
+            ${AVFUN_DIR}/AVPlayer.cpp
+            ${CODEC_DIR}/AVFAudioReader.cpp
+            ${CODEC_DIR}/AVFVideoReader.cpp
+
+            )
+
+elseif(AVF_ANDROID)
+
+    list(APPEND SOURCE_FILE
+            ${AVFUN_DIR}/AVPlayerAndroid.cpp
+            ${CODEC_DIR}/android/AVFAudioReader.cpp
+            ${CODEC_DIR}/android/AVFVideoReader.cpp
+            )
+
+else()
+
+endif()
 
 list(APPEND SOURCE_FILE ${GLAD_SOURCE})
 
@@ -70,9 +97,11 @@ add_library(${PRO_NAME} STATIC ${SOURCE_FILE})
 
 target_link_libraries(${PRO_NAME} PUBLIC ${FFMPEG_LIBS} yuv ${OpenCV_LIBS} ${SDL2_LIBRARIES})
 target_include_directories(${PRO_NAME} PUBLIC
-        ${AVFUN_DIR} ${GLAD_DIR} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS})
+        ${AVFUN_DIR} ${CODEC_DIR} ${GLAD_DIR} ${libyuv_INCLUDE} ${OpenCV_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS})
 
 ####################### example #######################
+if(AVF_WIN32 OR AVF_LINUX OR AVF_MACOS)
+
 add_executable(${PRO_NAME}-example01 ${AVFUN_DIR}/example/example01.cpp)
 target_link_libraries(${PRO_NAME}-example01 PRIVATE ${PRO_NAME})
 
@@ -93,3 +122,7 @@ target_link_libraries(${PRO_NAME}-example04 PRIVATE ${PRO_NAME})
 #file(COPY ${sdl_DIR}/build/Debug/SDL2d.dll 
 #${sdl_DIR}/build/Release/SDL2.dll 
 #DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+else()
+
+endif()

@@ -126,8 +126,6 @@ namespace avf {
     };
 
     struct AudFrame : public Frame{
-        AVFrame *frame{nullptr};
-        double pts{0};
         int sample_rate{0};
         int channels;
         int channel_layout;

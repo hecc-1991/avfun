@@ -1,6 +1,12 @@
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 
-set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv/build)
+
+if(AVF_ANDROID)
+    set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv/build_android)
+else()
+    set(OpenCV_DIR ${THIRD_PARTY_DIR}/opencv/build)
+endif()
+
 find_package(OpenCV REQUIRED)
 
 if(OpenCV_FOUND)

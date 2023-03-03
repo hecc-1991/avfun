@@ -6,6 +6,7 @@
 #define AVFUN_UTILS_H
 
 #include <array>
+#include <chrono>
 
 namespace avf {
     class Utils {
@@ -42,6 +43,15 @@ namespace avf {
             return vertices;
 
         };
+
+        static double GetTimeSec() {
+            auto now = std::chrono::steady_clock::now();
+            auto ms = std::chrono::time_point_cast<std::chrono:: microseconds>(now);
+            auto ret = ms.time_since_epoch().count() / 1000000.0;
+            return ret;
+
+        }
+
     };
 }
 #endif //AVFUN_MASTER_UTILS_H

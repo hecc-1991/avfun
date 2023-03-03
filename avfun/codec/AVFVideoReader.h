@@ -21,6 +21,7 @@ namespace avf
 		public:
 
 			static UP<VideoReader> Make(std::string_view filename);
+			static UP<VideoReader> Make(int fd);
 
 			virtual void SetupDecoder() = 0;
             virtual void ColseDecoder() = 0;
@@ -35,8 +36,6 @@ namespace avf
 			virtual void Next() = 0;
 			virtual void NextAt(int64_t pos) = 0;
             virtual bool Serial() = 0;
-
-		private:
 
 		};
 

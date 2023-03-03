@@ -64,7 +64,7 @@ namespace avf {
         //////////////////////////////////////////////////////////////////////////
 
         void init_clock(Clock *c) {
-            double time = av_gettime_relative() / 1000000.0;
+            double time = Utils::GetTimeSec();
             c->pts = 0;
             c->last_updated = time;
             c->pts_drift = c->pts - time;
@@ -93,7 +93,7 @@ namespace avf {
         static void fill_audio(void *udata, Uint8 *stream, int len) {
             VideoState *vs = (VideoState *) udata;
 
-            double audio_callback_time = av_gettime_relative() / 1000000.0;
+            double audio_callback_time = Utils::GetTimeSec();
 
             memset(stream, 0, len);
 
@@ -189,13 +189,13 @@ namespace avf {
                 if (c->paused) {
                     return c->pts;
                 } else {
-                    double time = av_gettime_relative() / 1000000.0;
+                    double time = Utils::GetTimeSec();
                     return c->pts_drift + time;
                 }
             };
 
             auto set_clock = [](Clock *c, double pts) {
-                double time = av_gettime_relative() / 1000000.0;
+                double time = Utils::GetTimeSec();
 
                 c->pts = pts;
                 c->last_updated = time;
@@ -247,7 +247,7 @@ namespace avf {
                 }
 
                 if (lastvp->serial != vp->serial)
-                    videoState->frame_timer = av_gettime_relative() / 1000000.0;
+                    videoState->frame_timer = Utils::GetTimeSec();
 
                 if (videoState->paused) {
                     goto display;
@@ -257,7 +257,7 @@ namespace avf {
                 auto delay = compute_target_delay(last_duration, &videoState->vidclk, &videoState->audclk);
 
 
-                auto time = av_gettime_relative() / 1000000.0;
+                auto time = Utils::GetTimeSec();
                 if (time < videoState->frame_timer + delay) {
                     goto display;
                 }
