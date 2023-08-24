@@ -249,11 +249,6 @@ namespace avf {
                 height = video_dec_ctx->height;
                 pix_fmt = video_dec_ctx->pix_fmt;
                 duration = fmt_ctx->duration;
-
-                if (ret < 0) {
-                    LOG_ERROR("Could not allocate raw video buffer");
-                    return;
-                }
             }
 
             if (!video_stream) {

@@ -14,6 +14,8 @@ import com.avfuncore.view.AVFSurfaceView;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "avfunplayer";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,7 +35,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View view) {
-        AVFPlayer player = AVFPlayer.Create("test.mp4");
+
+        String absolutePath = getCacheDir().getAbsolutePath();
+
+        // /data/user/0/com.example.avfunplayer/cache
+        Log.i(TAG, "absolutePath: "+absolutePath);
+
+        String filename = absolutePath + "/out2.mp4";
+
+        AVFPlayer player = AVFPlayer.Create(filename);
         player.play();
     }
 }

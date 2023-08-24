@@ -10,7 +10,7 @@ public class AVFPlayer {
     long mNativeContext;
 
     public AVFPlayer() {
-        native_init();
+        native_setup();
     }
 
     public static AVFPlayer Create(String path) {
@@ -31,6 +31,10 @@ public class AVFPlayer {
         _seekTo(timeMs);
     }
 
+    public void stop() {
+        _stop();
+    }
+
     public void release() {
         _release();
     }
@@ -38,9 +42,9 @@ public class AVFPlayer {
 
     //----------------------------------------------------------------------------------------------
 
-    private static native final void native_init();
+    static native void native_init();
 
-    private native void native_setup();
+    native void native_setup();
 
     native void _setDataSource(String path);
 
@@ -49,6 +53,8 @@ public class AVFPlayer {
     native void _pause();
 
     native void _seekTo(long timeMs);
+
+    native void _stop();
 
     private native void _release();
 

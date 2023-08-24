@@ -10,6 +10,7 @@
 #endif
 
 #include "EglThread.h"
+#include "GLContext.h"
 
 using namespace avf;
 
@@ -35,12 +36,12 @@ static void avfuncore_native_init(JNIEnv *env) {
 
 static void avfuncore_nativeSurfaceCreate(JNIEnv *env, jobject thiz, jobject surface) {
     ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
-    LOG_WARNING("avfuncore_nativeSurfaceCreate");
-    if(!eglThread){
-        eglThread = new EglThread();
-        eglThread->onSurfaceCreate(nativeWindow);
-    }
-
+    LOG_INFO("avfuncore_nativeSurfaceCreate");
+//    if(!eglThread){
+//        eglThread = new EglThread();
+//        eglThread->onSurfaceCreate(nativeWindow);
+//    }
+    GLContext::GetInstance()->Init(nativeWindow);
 }
 
 static void avfuncore_nativeSurfaceChanged(JNIEnv *env, jobject thiz, jint width, jint height) {
@@ -74,7 +75,5 @@ static int registerMethods(JNIEnv *env, const char *className, const JNINativeMe
 }
 
 int registerContextMethods(JNIEnv *env) {
-    LOG_ERROR("hecc","registerContextMethods");
-
     return registerMethods(env, "com/avfuncore/AVFContext", jniMethods, NELEM(jniMethods));
 }

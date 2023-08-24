@@ -1,10 +1,12 @@
 #include <jni.h>
 #include <string>
+#include <vector>
 #include <mutex>
 
 #include "LogUtil.h"
-//#include "AVPlayer.h"
+#include "AVPlayer.h"
 
+using avf::AVPlayer;
 
 #ifndef NELEM
 #define NELEM(x) ((int) (sizeof(x) / sizeof((x)[0])))
@@ -17,16 +19,6 @@ static fields_t fields;
 
 static std::mutex mtx;
 
-//using namespace avf;
-
-class AVPlayer {
-public:
-    int OpenVideo(std::string path)
-    {
-        return  0;
-    }
-};
-
 static void avfuncore_native_init(JNIEnv *env) {
     jclass clazz;
     clazz = env->FindClass("com/avfuncore/AVFPlayer");
@@ -36,6 +28,7 @@ static void avfuncore_native_init(JNIEnv *env) {
 
     fields.context = env->GetFieldID(clazz, "mNativeContext", "J");
     if (fields.context == NULL) {
+        LOG_ERROR("GetFieldID mNativeContext failed");
         return;
     }
 
@@ -51,7 +44,7 @@ static AVPlayer *getPlayer(JNIEnv *env, jobject thiz) {
 static void avfuncore_native_setup(JNIEnv *env, jobject thiz) {
     LOG_INFO("init");
     std::unique_lock<std::mutex> lock(mtx);
-    auto player = new AVPlayer();
+    AVPlayer* player = new AVPlayer();
     env->SetLongField(thiz, fields.context, (jlong) player);
 }
 
@@ -69,16 +62,21 @@ static void avfuncore_native_setDataSource(JNIEnv *env, jobject thiz, jstring pa
 
 static void avfuncore_native_play(JNIEnv *env, jobject thiz) {
     LOG_INFO("play");
-
+    auto player = getPlayer(env, thiz);
+    player->Start();
 }
 
 static void avfuncore_native_pause(JNIEnv *env, jobject thiz) {
     LOG_INFO("pause");
-
 }
 
 static void avfuncore_native_seekTo(JNIEnv *env, jobject thiz, jlong timeMs) {
     LOG_INFO("seekTo: %ld", timeMs);
+
+}
+
+static void avfuncore_native_stop(JNIEnv *env, jobject thiz) {
+    LOG_INFO("stop");
 
 }
 
@@ -99,6 +97,7 @@ static const JNINativeMethod jniMethods[] = {
         {"_play",    "()V",                   (void *) avfuncore_native_play},
         {"_pause",   "()V",                   (void *) avfuncore_native_pause},
         {"_seekTo",  "(J)V",                  (void *) avfuncore_native_seekTo},
+        {"_stop",   "()V",                   (void *) avfuncore_native_stop},
         {"_release", "()V",                   (void *) avfuncore_release},
 
 };
@@ -123,7 +122,7 @@ static int registerPlayerMethods(JNIEnv *env) {
 extern int registerContextMethods(JNIEnv *env);
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void * /*reserved*/) {
-    LOG_ERROR("hecc","JNI_OnLoad");
+    LOG_INFO("+++");
     JNIEnv *env = NULL;
     if (vm->GetEnv((void **) &env, JNI_VERSION_1_4) != JNI_OK) {
         return -1;
@@ -136,5 +135,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void * /*reserved*/) {
         return -1;
     }
 
+    LOG_INFO("---");
     return JNI_VERSION_1_4;
 }

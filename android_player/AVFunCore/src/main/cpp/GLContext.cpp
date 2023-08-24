@@ -54,6 +54,16 @@ namespace avf {
         return true;
     }
 
+    bool GLContext::Make()
+    {
+        if (eglMakeCurrent(display_, surface_, surface_, context_) == EGL_FALSE) {
+            LOG_ERROR("Unable to eglMakeCurrent");
+            return false;
+        }
+
+        return true;
+    }
+
     bool GLContext::InitEGLSurface() {
         display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         eglInitialize(display_, 0, 0);
@@ -120,7 +130,7 @@ namespace avf {
         context_ = eglCreateContext(display_, config_, NULL, context_attribs);
 
         if (eglMakeCurrent(display_, surface_, surface_, context_) == EGL_FALSE) {
-            LOG_WARNING("Unable to eglMakeCurrent");
+            LOG_ERROR("Unable to eglMakeCurrent");
             return false;
         }
 

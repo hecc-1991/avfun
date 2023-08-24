@@ -1,16 +1,16 @@
 set(AVFUN_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(THIRD_PARTY_DIR ${AVFUN_ROOT}/third_party)
 
-set(ffmpeg_DIR ${THIRD_PARTY_DIR}/ffmpeg_build)
-set(ffmpeg_INCLUDE ${THIRD_PARTY_DIR}/ffmpeg_build/include)
 
 include(${AVFUN_ROOT}/cmake/platform.cmake)
 
 if(AVF_LINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -lm -latomic")
 elseif(AVF_MACOS)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -liconv -lm -llzma -lz -framework AudioToolbox -pthread -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -lm -lbz2 -lz -Wl,-framework,CoreFoundation -Wl,-framework,Security")
+    set(ffmpeg_DIR ${THIRD_PARTY_DIR}/ffmpeg/mac)
+    set(ffmpeg_INCLUDE ${THIRD_PARTY_DIR}/ffmpeg/mac/include)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -liconv -lm -llzma -lz -framework AudioToolbox -pthread -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -lm -lbz2 -lz -Wl,-framework,CoreFoundation -Wl,-framework,Security")
 else()
 
 endif()

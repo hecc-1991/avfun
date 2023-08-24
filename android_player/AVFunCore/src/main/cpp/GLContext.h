@@ -51,7 +51,11 @@ namespace avf {
         }
 
         bool Init(ANativeWindow* window);
+
+        bool Make();
+
         EGLint Swap();
+
         bool Invalidate();
 
         void Suspend();
